@@ -359,7 +359,7 @@ public final class HillCommand implements TabExecutor, BasicCommand {
             lang.send(sender, "error-usage", Placeholder.parsed("usage", "/hill assign <player|selector> <blue|yellow>"));
             return;
         }
-        var team = TeamId.parse(args[2]);
+        var team = TeamId.parse(args[2], plugin.config().teams());
         if (team.isEmpty()) {
             lang.send(sender, "error-invalid-team");
             return;
@@ -460,16 +460,8 @@ public final class HillCommand implements TabExecutor, BasicCommand {
                 lang.text("shape", hill.spec().shape().id()),
                 lang.text("world", hill.worldName()));
         lang.send(sender, match.paused() ? "status-paused" : "status-running");
-        lang.send(
-                sender,
-                "status-blue",
-                lang.text("team", plugin.config().blueDisplay()),
-                lang.number("score", match.score(TeamId.BLUE)));
-        lang.send(
-                sender,
-                "status-yellow",
-                lang.text("team", plugin.config().yellowDisplay()),
-                lang.number("score", match.score(TeamId.YELLOW)));
+        lang.send(sender, "status-blue", lang.number("score", match.score(TeamId.BLUE)));
+        lang.send(sender, "status-yellow", lang.number("score", match.score(TeamId.YELLOW)));
         String pointKey = switch (match.pointState()) {
             case EMPTY -> "status-point-empty";
             case CONTESTED -> "status-point-contested";
@@ -745,7 +737,7 @@ public final class HillCommand implements TabExecutor, BasicCommand {
             lang.send(sender, "error-invalid-amount");
             return;
         }
-        var team = TeamId.parse(args[3]);
+        var team = TeamId.parse(args[3], plugin.config().teams());
         if (team.isEmpty()) {
             lang.send(sender, "error-invalid-team");
             return;
@@ -925,7 +917,7 @@ public final class HillCommand implements TabExecutor, BasicCommand {
                     names.addAll(Bukkit.getOnlinePlayers().stream().map(Player::getName).toList());
                     yield names;
                 }
-                yield args.length == 3 ? List.of("blue", "yellow") : List.of();
+                yield args.length == 3 ? teamTokens() : List.of();
             }
             case "unassign" -> {
                 if (args.length != 2) {
@@ -946,7 +938,7 @@ public final class HillCommand implements TabExecutor, BasicCommand {
                     yield List.of("1", "5", "10");
                 }
                 if (args.length == 4) {
-                    yield List.of("blue", "yellow");
+                    yield teamTokens();
                 }
                 if (args.length == 5) {
                     yield idsAll;
@@ -982,6 +974,25 @@ public final class HillCommand implements TabExecutor, BasicCommand {
         if (sender.hasPermission(node)) {
             subs.add(name);
         }
+    }
+
+    private List<String> teamTokens() {
+        List<String> tokens = new ArrayList<>();
+        tokens.add("blue");
+        tokens.add("yellow");
+        var config = plugin.config();
+        if (config == null) {
+            return tokens;
+        }
+        String team1 = config.teams().team1().display();
+        String team2 = config.teams().team2().display();
+        if (tokens.stream().noneMatch(token -> token.equalsIgnoreCase(team1))) {
+            tokens.add(team1);
+        }
+        if (tokens.stream().noneMatch(token -> token.equalsIgnoreCase(team2))) {
+            tokens.add(team2);
+        }
+        return tokens;
     }
 
     private List<String> filter(List<String> options, String token) {

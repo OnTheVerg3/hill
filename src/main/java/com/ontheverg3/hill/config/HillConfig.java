@@ -12,8 +12,7 @@ public final class HillConfig {
     private final int winScore;
     private final PlayerFilter scoringFilter;
     private final PlayerFilter assignFilter;
-    private final String blueDisplay;
-    private final String yellowDisplay;
+    private final TeamLooks teams;
     private final boolean actionBar;
     private final boolean bossBar;
     private final int displayUpdateTicks;
@@ -32,8 +31,7 @@ public final class HillConfig {
             int winScore,
             PlayerFilter scoringFilter,
             PlayerFilter assignFilter,
-            String blueDisplay,
-            String yellowDisplay,
+            TeamLooks teams,
             boolean actionBar,
             boolean bossBar,
             int displayUpdateTicks,
@@ -50,8 +48,7 @@ public final class HillConfig {
         this.winScore = winScore;
         this.scoringFilter = scoringFilter;
         this.assignFilter = assignFilter;
-        this.blueDisplay = blueDisplay;
-        this.yellowDisplay = yellowDisplay;
+        this.teams = teams;
         this.actionBar = actionBar;
         this.bossBar = bossBar;
         this.displayUpdateTicks = displayUpdateTicks;
@@ -71,8 +68,7 @@ public final class HillConfig {
         int winScore = requireNonNegativeInt(yaml, "scoring.win-score");
         PlayerFilter scoringFilter = PlayerFilter.load(yaml, "eligibility", true, true, false);
         PlayerFilter assignFilter = PlayerFilter.load(yaml, "assign", true, true, true);
-        String blue = requireString(yaml, "teams.blue.display");
-        String yellow = requireString(yaml, "teams.yellow.display");
+        TeamLooks teams = loadTeams(yaml);
         boolean actionBar = yaml.getBoolean("display.action-bar", true);
         boolean bossBar = yaml.getBoolean("display.boss-bar", true);
         int updateTicks = requirePositiveInt(yaml, "display.update-ticks");
@@ -104,8 +100,7 @@ public final class HillConfig {
                 winScore,
                 scoringFilter,
                 assignFilter,
-                blue,
-                yellow,
+                teams,
                 actionBar,
                 bossBar,
                 updateTicks,
@@ -126,8 +121,7 @@ public final class HillConfig {
                 0,
                 new PlayerFilter(true, true, false, List.of(GameMode.SPECTATOR)),
                 new PlayerFilter(true, true, true, List.of(GameMode.SPECTATOR, GameMode.CREATIVE)),
-                "Blue",
-                "Yellow",
+                TeamLooks.defaults(),
                 true,
                 true,
                 20,
@@ -184,12 +178,16 @@ public final class HillConfig {
         return assignFilter.excluded(player);
     }
 
+    public TeamLooks teams() {
+        return teams;
+    }
+
     public String blueDisplay() {
-        return blueDisplay;
+        return teams.team1().display();
     }
 
     public String yellowDisplay() {
-        return yellowDisplay;
+        return teams.team2().display();
     }
 
     public boolean actionBar() {
@@ -230,6 +228,26 @@ public final class HillConfig {
 
     public int outlinePoints() {
         return outlinePoints;
+    }
+
+    private static TeamLooks loadTeams(FileConfiguration yaml) throws ConfigException {
+        String team1Display = firstString(yaml, "team1-displayname", "teams.blue.display", "Blue");
+        String team1Color = firstString(yaml, "team1-color", "teams.blue.color", "blue");
+        String team2Display = firstString(yaml, "team2-displayname", "teams.yellow.display", "Yellow");
+        String team2Color = firstString(yaml, "team2-color", "teams.yellow.color", "yellow");
+        return TeamLooks.of(team1Display, team1Color, team2Display, team2Color);
+    }
+
+    private static String firstString(FileConfiguration yaml, String path, String fallbackPath, String fallback) {
+        String value = yaml.getString(path);
+        if (value != null && !value.isBlank()) {
+            return value;
+        }
+        String legacy = yaml.getString(fallbackPath);
+        if (legacy != null && !legacy.isBlank()) {
+            return legacy;
+        }
+        return fallback;
     }
 
     private static String requireString(FileConfiguration yaml, String path) throws ConfigException {

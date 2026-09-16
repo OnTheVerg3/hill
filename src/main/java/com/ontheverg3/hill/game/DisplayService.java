@@ -169,7 +169,7 @@ public final class DisplayService {
             Component action = lang.hud("action-bar", blue, yellow, pointTag);
             Component boss = lang.hud("boss-bar", blue, yellow, pointTag);
             float progress = progress(plugin, match);
-            BossBar.Color color = barColor(state);
+            BossBar.Color color = barColor(plugin, state);
             int hash = 31 * (31 * (31 * (31 * state.ordinal() + blueScore) + yellowScore)
                             + hill.hillId().hashCode())
                     + Float.hashCode(progress);
@@ -196,10 +196,11 @@ public final class DisplayService {
             return Math.min(1.0f, lead / (float) cap);
         }
 
-        private static BossBar.Color barColor(PointState state) {
+        private static BossBar.Color barColor(HillPlugin plugin, PointState state) {
+            var teams = plugin.config() == null ? null : plugin.config().teams();
             return switch (state) {
-                case CONTROLLED_BLUE -> BossBar.Color.BLUE;
-                case CONTROLLED_YELLOW -> BossBar.Color.YELLOW;
+                case CONTROLLED_BLUE -> teams == null ? BossBar.Color.BLUE : teams.team1().bossBarColor();
+                case CONTROLLED_YELLOW -> teams == null ? BossBar.Color.YELLOW : teams.team2().bossBarColor();
                 case CONTESTED -> BossBar.Color.RED;
                 case UNUSABLE -> BossBar.Color.PURPLE;
                 case EMPTY -> BossBar.Color.WHITE;

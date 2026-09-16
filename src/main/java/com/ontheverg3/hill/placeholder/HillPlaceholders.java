@@ -68,7 +68,9 @@ public final class HillPlaceholders {
                             hills.teams()::teamOf,
                             hills::occupying,
                             config.blueDisplay(),
-                            config.yellowDisplay()));
+                            config.yellowDisplay(),
+                            config.teams().team1().hex(),
+                            config.teams().team2().hex()));
         }
 
         @Override

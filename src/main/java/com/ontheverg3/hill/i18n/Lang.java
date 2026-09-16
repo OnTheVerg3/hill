@@ -15,6 +15,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 public final class Lang {
     private final JavaPlugin plugin;
     private final MiniMessage mini = MiniMessage.miniMessage();
+    private volatile TagResolver defaults = TagResolver.empty();
     private YamlConfiguration yaml;
 
     public Lang(JavaPlugin plugin) {
@@ -43,13 +44,17 @@ public final class Lang {
         }
     }
 
+    public void setDefaults(TagResolver defaults) {
+        this.defaults = defaults == null ? TagResolver.empty() : defaults;
+    }
+
     public Component chat(String key, TagResolver... extra) {
         String prefix = string("prefix");
-        return mini.deserialize(prefix + string(key), extra);
+        return mini.deserialize(prefix + string(key), merge(extra));
     }
 
     public Component hud(String key, TagResolver... extra) {
-        return mini.deserialize(string(key), extra);
+        return mini.deserialize(string(key), merge(extra));
     }
 
     public void send(CommandSender sender, String key, TagResolver... extra) {
@@ -77,5 +82,13 @@ public final class Lang {
             return key;
         }
         return yaml.getString(key, key);
+    }
+
+    private TagResolver merge(TagResolver[] extra) {
+        TagResolver base = defaults;
+        if (extra == null || extra.length == 0) {
+            return base;
+        }
+        return TagResolver.resolver(base, TagResolver.resolver(extra));
     }
 }

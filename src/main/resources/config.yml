@@ -26,13 +26,12 @@ assign:
     - SPECTATOR
     - CREATIVE
 
-teams:
-  blue:
-    id: blue
-    display: Blue
-  yellow:
-    id: yellow
-    display: Yellow
+# Names and colors players see. Scoring still uses the two internal slots (blue / yellow in data.yml).
+# Colors: Minecraft names (blue, gold, dark_aqua, light_purple, ...) or hex (#RGB, #RRGGBB, RRGGBB).
+team1-displayname: Blue
+team1-color: blue
+team2-displayname: Yellow
+team2-color: yellow
 
 display:
   action-bar: true

@@ -28,6 +28,8 @@ class PlaceholderQueryTest {
         assertEquals("1", PlaceholderQuery.resolve("count", viewer, context));
         assertEquals("castle_hill", PlaceholderQuery.resolve("ids", viewer, context));
         assertEquals("yellow", PlaceholderQuery.resolve("team", viewer, context));
+        assertEquals("Blue", PlaceholderQuery.resolve("team_blue", viewer, context));
+        assertEquals("#5555ff", PlaceholderQuery.resolve("team_color_blue", viewer, context));
         assertEquals("12", PlaceholderQuery.resolve("score_blue_castle_hill", viewer, context));
         assertEquals("4", PlaceholderQuery.resolve("score_yellow_castle_hill", viewer, context));
         assertEquals("blue", PlaceholderQuery.resolve("state_castle_hill", viewer, context));
@@ -54,7 +56,9 @@ class PlaceholderQueryTest {
                         id -> null,
                         id -> null,
                         "Blue",
-                        "Yellow");
+                        "Yellow",
+                        "#5555ff",
+                        "#ffff55");
         assertEquals("mid", PlaceholderQuery.resolve("here_id", onHill, on));
         assertEquals("3", PlaceholderQuery.resolve("here_score_blue", onHill, on));
         assertEquals("", PlaceholderQuery.resolve("here_id", unassigned, off));
@@ -76,6 +80,8 @@ class PlaceholderQueryTest {
                 teams::get,
                 id -> viewer.equals(id) ? hill : null,
                 "Blue",
-                "Yellow");
+                "Yellow",
+                "#5555ff",
+                "#ffff55");
     }
 }

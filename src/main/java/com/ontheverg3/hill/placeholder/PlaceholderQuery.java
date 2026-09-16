@@ -45,6 +45,8 @@ public final class PlaceholderQuery {
             case "team" -> teamToken(context.teamOf().apply(viewer));
             case "team_blue" -> nullToEmpty(context.blueDisplay());
             case "team_yellow" -> nullToEmpty(context.yellowDisplay());
+            case "team_color_blue" -> nullToEmpty(context.blueColor());
+            case "team_color_yellow" -> nullToEmpty(context.yellowColor());
             default -> resolveRest(params, viewer, context);
         };
     }
@@ -128,7 +130,9 @@ public final class PlaceholderQuery {
             Function<UUID, TeamId> teamOf,
             Function<UUID, HillInstance> occupying,
             String blueDisplay,
-            String yellowDisplay) {
+            String yellowDisplay,
+            String blueColor,
+            String yellowColor) {
         public Context {
             ids = ids == null ? List.of() : List.copyOf(ids);
             byId = byId == null ? id -> null : byId;
@@ -136,6 +140,8 @@ public final class PlaceholderQuery {
             occupying = occupying == null ? id -> null : occupying;
             blueDisplay = blueDisplay == null ? "Blue" : blueDisplay;
             yellowDisplay = yellowDisplay == null ? "Yellow" : yellowDisplay;
+            blueColor = blueColor == null ? "#5555ff" : blueColor;
+            yellowColor = yellowColor == null ? "#ffff55" : yellowColor;
             mode = mode == null ? HillMode.KOTH : mode;
         }
     }

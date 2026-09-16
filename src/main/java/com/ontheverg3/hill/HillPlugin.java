@@ -59,6 +59,7 @@ public final class HillPlugin extends JavaPlugin {
             getLogger().severe("Hill will stay loaded until /hill reload succeeds.");
             this.config = HillConfig.fallback(ex.getMessage());
             lang.load("en");
+            lang.setDefaults(this.config.teams().resolvers());
         }
         hillsStore.load(hills);
         dataStore.load(hills);
@@ -99,6 +100,7 @@ public final class HillPlugin extends JavaPlugin {
         reloadConfig();
         this.config = HillConfig.load(getConfig());
         lang.load(this.config.locale());
+        lang.setDefaults(this.config.teams().resolvers());
     }
 
     public void reloadAll() throws ConfigException {

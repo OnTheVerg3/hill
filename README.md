@@ -1,6 +1,6 @@
 # Hill
 
-Folia King of the Hill. Blue vs Yellow. A team only scores if they have a hill to themselves.
+Folia King of the Hill. Two teams. A team only scores if they have a hill to themselves.
 
 Needs Folia 1.21.11. `folia-supported` is already set.
 
@@ -18,7 +18,7 @@ The 2D footprint of each hill is outlined on the ground with particles. Uneven t
 
 ## Scoring
 
-Every `scoring.interval-seconds` (default 5), if exactly one team has eligible players in that hill, they get `scoring.points` (default 1). Contested or empty: nothing. Each hill has its own score. Teams are global.
+Every `scoring.interval-seconds` (default 5), if exactly one team has eligible players in that hill, they get `scoring.points` (default 1). Contested or empty: nothing. Each hill has its own score. Teams are global. Display names and colors are `team1-displayname`, `team1-color`, `team2-displayname`, and `team2-color`. Scores in `data.yml` still use `blue` and `yellow`.
 
 Dead players and spectators do not count toward scoring by default. Creative players can still score unless you turn that off under `eligibility`. Pause keeps the scores.
 
@@ -33,7 +33,7 @@ Dead players and spectators do not count toward scoring by default. Creative pla
 | `/hill remove <id\|all>` | Delete a hill, or every hill |
 | `/hill reload` | Reload config, language, and `hills.json` |
 | `/hill help` | Command list |
-| `/hill assign <player\|selector> <blue\|yellow>` | Assign to a team. Named players always assign. Selectors skip players excluded by `assign:` in config unless the selector already mentions gamemode or dead |
+| `/hill assign <player\|selector> <blue\|yellow>` | Assign to a team. You can also use the configured display names. Named players always assign. Selectors skip players excluded by `assign:` in config unless the selector already mentions gamemode or dead |
 | `/hill unassign <player\|selector\|all>` | Remove from a team |
 | `/hill status <hill id>` | Scores, control, roster |
 | `/hill swapteams` | Swap Blue and Yellow assignments (global) |
@@ -73,10 +73,14 @@ These are normal Bukkit permission nodes. LuckPerms and vanilla operators both w
 
 ## Config
 
-`config.yml` holds scoring, eligibility, assign filters, HUD, outline, and locale. Hill geometry is not in this file.
+`config.yml` holds scoring, eligibility, assign filters, team names and colors, HUD, outline, and locale. Hill geometry is not in this file.
 
 | Key | Default | What it does |
 |---|---|---|
+| `team1-displayname` | Blue | Visible name for the first team |
+| `team1-color` | blue | Chat/HUD color. Minecraft name (`blue`, `gold`, `dark_aqua`, `light_purple`, ...) or hex (`#RGB`, `#RRGGBB`, `RRGGBB`) |
+| `team2-displayname` | Yellow | Visible name for the second team |
+| `team2-color` | yellow | Same color rules as team 1 |
 | `eligibility.exclude-dead` | true | Dead players do not score |
 | `eligibility.exclude-spectator` | true | Spectators do not score |
 | `eligibility.exclude-creative` | false | Creative players do not score when true |
@@ -101,8 +105,9 @@ Hill ids can contain underscores. Put the id at the end of the token.
 | `%hill_mode%` | `koth` or `ctf` |
 | `%hill_count%` | number of hills |
 | `%hill_ids%` | comma-separated hill ids |
-| `%hill_team%` | viewer's team: `blue`, `yellow`, or empty |
+| `%hill_team%` | viewer's team slot: `blue`, `yellow`, or empty |
 | `%hill_team_blue%` / `%hill_team_yellow%` | configured display names |
+| `%hill_team_color_blue%` / `%hill_team_color_yellow%` | configured colors as `#rrggbb` |
 | `%hill_score_blue_<id>%` | Blue score on that hill |
 | `%hill_score_yellow_<id>%` | Yellow score on that hill |
 | `%hill_state_<id>%` | `empty`, `contested`, `blue`, `yellow`, or `unusable` |
