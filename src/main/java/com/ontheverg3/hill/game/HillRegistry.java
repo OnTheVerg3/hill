@@ -64,6 +64,18 @@ public final class HillRegistry {
         return ids;
     }
 
+    public HillInstance occupying(UUID playerId) {
+        if (playerId == null) {
+            return null;
+        }
+        for (HillInstance instance : instances.values()) {
+            if (instance.tracker().occupies(playerId)) {
+                return instance;
+            }
+        }
+        return null;
+    }
+
     public HillInstance containing(Location location) {
         if (location == null || location.getWorld() == null) {
             return null;

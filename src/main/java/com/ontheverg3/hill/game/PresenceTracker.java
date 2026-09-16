@@ -29,6 +29,10 @@ public final class PresenceTracker {
         return inside.size();
     }
 
+    public boolean occupies(UUID id) {
+        return id != null && inside.containsKey(id);
+    }
+
     public PointState snapshot() {
         boolean blue = false;
         boolean yellow = false;

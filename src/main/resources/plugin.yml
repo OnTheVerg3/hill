@@ -7,6 +7,8 @@ author: OnTheVerg3
 description: Folia King of the Hill (Blue vs Yellow)
 website: https://github.com/OnTheVerg3/hill
 prefix: Hill
+softdepend:
+  - PlaceholderAPI
 
 permissions:
   hill.status:

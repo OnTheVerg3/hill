@@ -90,6 +90,38 @@ Bad numbers keep the last good config on reload. If a hill's world is not loaded
 
 Lang: copy `plugins/Hill/lang/<code>.yml` and set `locale:` to the file name. Missing keys fall back to English.
 
+## Placeholders
+
+Bukkit scoreboards are not used. They are broken on Folia. Install [PlaceholderAPI](https://www.spigotmc.org/resources/placeholderapi.6245/) and put these tokens in TAB, FeatherBoard, DecentHolograms, or any other scoreboard/hologram plugin that reads PlaceholderAPI. Hill is a soft depend. It still loads if PlaceholderAPI is missing.
+
+Hill ids can contain underscores. Put the id at the end of the token.
+
+| Placeholder | Value |
+|---|---|
+| `%hill_mode%` | `koth` or `ctf` |
+| `%hill_count%` | number of hills |
+| `%hill_ids%` | comma-separated hill ids |
+| `%hill_team%` | viewer's team: `blue`, `yellow`, or empty |
+| `%hill_team_blue%` / `%hill_team_yellow%` | configured display names |
+| `%hill_score_blue_<id>%` | Blue score on that hill |
+| `%hill_score_yellow_<id>%` | Yellow score on that hill |
+| `%hill_state_<id>%` | `empty`, `contested`, `blue`, `yellow`, or `unusable` |
+| `%hill_paused_<id>%` | `true` or `false` |
+| `%hill_display_<id>%` | display name |
+| `%hill_shape_<id>%` | `square`, `circle`, `cube`, `sphere`, or `cylinder` |
+| `%hill_world_<id>%` | Bukkit world name |
+| `%hill_dimension_<id>%` | dimension token |
+| `%hill_save_<id>%` | world save name |
+| `%hill_here_id%` | hill the viewer currently occupies (assigned and eligible only) |
+| `%hill_here_score_blue%` / `%hill_here_score_yellow%` | scores for that hill |
+| `%hill_here_state%` | control state for that hill |
+| `%hill_here_paused%` | pause flag for that hill |
+| `%hill_here_display%` | display name for that hill |
+
+Unknown ids resolve to an empty string. Unassigned players do not occupy a hill, so `%hill_here_*%` is empty for them.
+
+Example: `%hill_score_blue_mid%` and `%hill_state_castle_hill%`.
+
 ## Build
 
 ```

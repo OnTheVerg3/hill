@@ -29,6 +29,7 @@ public final class HillPlugin extends JavaPlugin {
     private ScoringService scoring;
     private DisplayService display;
     private OutlineService outline;
+    private Runnable placeholderShutdown;
 
     public HillPlugin() {
         getLifecycleManager()
@@ -67,11 +68,16 @@ public final class HillPlugin extends JavaPlugin {
         scoring.start();
         display.start();
         outline.start();
+        hookPlaceholders();
         getLogger().info("Hill enabled for Folia 1.21.11 (" + hills.mode().display() + ", " + hills.all().size() + " hills)");
     }
 
     @Override
     public void onDisable() {
+        if (placeholderShutdown != null) {
+            placeholderShutdown.run();
+            placeholderShutdown = null;
+        }
         if (scoring != null) {
             scoring.stop();
         }
@@ -164,5 +170,24 @@ public final class HillPlugin extends JavaPlugin {
             return;
         }
         hillsStore.save(hills);
+    }
+
+    private void hookPlaceholders() {
+        if (getServer().getPluginManager().getPlugin("PlaceholderAPI") == null) {
+            return;
+        }
+        try {
+            Class<?> type = Class.forName("com.ontheverg3.hill.placeholder.HillPlaceholders");
+            Object hook = type.getMethod("register", HillPlugin.class).invoke(null, this);
+            placeholderShutdown = () -> {
+                try {
+                    type.getMethod("unregister", Object.class).invoke(null, hook);
+                } catch (ReflectiveOperationException ignored) {
+                }
+            };
+            getLogger().info("PlaceholderAPI hooked. Scoreboard plugins can use %hill_*% with a hill id.");
+        } catch (ReflectiveOperationException | RuntimeException ex) {
+            getLogger().warning("Could not hook PlaceholderAPI: " + ex.getMessage());
+        }
     }
 }
