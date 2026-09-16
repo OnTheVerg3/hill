@@ -1,0 +1,54 @@
+# Hill config. Bad values keep the last good config on reload.
+
+locale: en
+
+scoring:
+  interval-seconds: 5
+  points: 1
+  # 0 = no cap
+  win-score: 0
+
+# Who can score while standing in a hill.
+eligibility:
+  exclude-dead: true
+  exclude-spectator: true
+  exclude-creative: false
+  exclude-gamemodes:
+    - SPECTATOR
+
+# /hill assign (unless you name a player or the selector already filters gamemode/dead)
+# and /hill autodivide (always).
+assign:
+  exclude-dead: true
+  exclude-spectator: true
+  exclude-creative: true
+  exclude-gamemodes:
+    - SPECTATOR
+    - CREATIVE
+
+teams:
+  blue:
+    id: blue
+    display: Blue
+  yellow:
+    id: yellow
+    display: Yellow
+
+display:
+  action-bar: true
+  boss-bar: true
+  update-ticks: 20
+  # Skip HUD for players with no client connection (some NPCs).
+  skip-without-address: true
+  # Skip HUD when the player name starts with this (empty = off).
+  ignore-name-prefix: ""
+
+outline:
+  enabled: true
+  interval-ticks: 10
+  points: 72
+
+reset:
+  clear-teams: false
+
+reload-resets: false

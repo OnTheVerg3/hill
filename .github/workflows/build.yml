@@ -1,0 +1,28 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+      - name: Test and package
+        run: mvn -B -q package
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Hill
+          path: target/Hill.jar
+          if-no-files-found: error

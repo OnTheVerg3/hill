@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.ontheverg3</groupId>
+    <artifactId>hill</artifactId>
+    <version>1.0.0</version>
+    <packaging>jar</packaging>
+    <name>Hill</name>
+    <description>Folia 1.21.11 King of the Hill (Blue vs Yellow)</description>
+    <url>https://github.com/OnTheVerg3/hill</url>
+
+    <scm>
+        <url>https://github.com/OnTheVerg3/hill</url>
+        <connection>scm:git:https://github.com/OnTheVerg3/hill.git</connection>
+        <developerConnection>scm:git:https://github.com/OnTheVerg3/hill.git</developerConnection>
+    </scm>
+
+    <issueManagement>
+        <system>GitHub</system>
+        <url>https://github.com/OnTheVerg3/hill/issues</url>
+    </issueManagement>
+
+    <developers>
+        <developer>
+            <id>OnTheVerg3</id>
+            <name>OnTheVerg3</name>
+            <url>https://github.com/OnTheVerg3</url>
+        </developer>
+    </developers>
+
+    <properties>
+        <java.version>21</java.version>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <folia.api.version>1.21.11-R0.1-SNAPSHOT</folia.api.version>
+    </properties>
+
+    <repositories>
+        <repository>
+            <id>papermc</id>
+            <url>https://repo.papermc.io/repository/maven-public/</url>
+        </repository>
+    </repositories>
+
+    <dependencies>
+        <dependency>
+            <groupId>dev.folia</groupId>
+            <artifactId>folia-api</artifactId>
+            <version>${folia.api.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+            <version>2.11.0</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>5.11.4</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <finalName>Hill</finalName>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+                <includes>
+                    <include>plugin.yml</include>
+                </includes>
+            </resource>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>false</filtering>
+                <excludes>
+                    <exclude>plugin.yml</exclude>
+                </excludes>
+            </resource>
+        </resources>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.13.0</version>
+                <configuration>
+                    <release>${java.version}</release>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.5.2</version>
+            </plugin>
+        </plugins>
+    </build>
+</project>

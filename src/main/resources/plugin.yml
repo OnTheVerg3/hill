@@ -1,0 +1,79 @@
+name: Hill
+version: '${project.version}'
+main: com.ontheverg3.hill.HillPlugin
+api-version: '1.21.11'
+folia-supported: true
+author: OnTheVerg3
+description: Folia King of the Hill (Blue vs Yellow)
+website: https://github.com/OnTheVerg3/hill
+prefix: Hill
+
+permissions:
+  hill.status:
+    description: View a hill's scores and point state
+    default: true
+  hill.help:
+    description: View /hill help
+    default: op
+  hill.reload:
+    description: Reload config, language, and hills.json
+    default: op
+  hill.mode:
+    description: Switch KotH or CTF mode
+    default: op
+  hill.new:
+    description: Create a hill
+    default: op
+  hill.remove:
+    description: Remove a hill
+    default: op
+  hill.assign:
+    description: Assign players to Blue or Yellow
+    default: op
+  hill.unassign:
+    description: Remove players from a team
+    default: op
+  hill.swapteams:
+    description: Swap Blue and Yellow assignments
+    default: op
+  hill.swapscore:
+    description: Swap Blue and Yellow scores on a hill
+    default: op
+  hill.pause:
+    description: Pause scoring on a hill
+    default: op
+  hill.resume:
+    description: Resume scoring on a hill
+    default: op
+  hill.reset:
+    description: Reset scores on a hill
+    default: op
+  hill.perf:
+    description: View occupancy sample timing
+    default: op
+  hill.autodivide:
+    description: Shuffle-split online players by percent
+    default: op
+  hill.score:
+    description: Add or remove team score on a hill
+    default: op
+  hill.admin:
+    description: All Hill commands
+    default: op
+    children:
+      hill.status: true
+      hill.help: true
+      hill.reload: true
+      hill.mode: true
+      hill.new: true
+      hill.remove: true
+      hill.assign: true
+      hill.unassign: true
+      hill.swapteams: true
+      hill.swapscore: true
+      hill.pause: true
+      hill.resume: true
+      hill.reset: true
+      hill.perf: true
+      hill.autodivide: true
+      hill.score: true
