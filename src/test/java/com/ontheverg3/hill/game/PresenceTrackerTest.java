@@ -20,4 +20,20 @@ class PresenceTrackerTest {
         tracker.remove(blue);
         assertEquals(PointState.EMPTY, tracker.snapshot());
     }
+
+    @Test
+    void unassignedPlayersDoNotOccupyTheHill() {
+        PresenceTracker tracker = new PresenceTracker();
+        UUID unassigned = UUID.fromString("00000000-0000-0000-0000-000000000003");
+        UUID blue = UUID.fromString("00000000-0000-0000-0000-000000000001");
+        tracker.remember(unassigned, null);
+        assertEquals(0, tracker.size());
+        assertEquals(PointState.EMPTY, tracker.snapshot());
+        tracker.remember(blue, TeamId.BLUE);
+        tracker.remember(unassigned, null);
+        assertEquals(1, tracker.size());
+        assertEquals(PointState.CONTROLLED_BLUE, tracker.snapshot());
+        tracker.remove(unassigned);
+        assertEquals(PointState.CONTROLLED_BLUE, tracker.snapshot());
+    }
 }

@@ -55,7 +55,11 @@ public final class PresenceTracker {
             return;
         }
         TeamId team = teams.teamOf(id);
-        if (team == null || config.scoringFilter().excluded(player) || !zone.contains(player.getLocation())) {
+        if (team == null) {
+            inside.remove(id);
+            return;
+        }
+        if (config.scoringFilter().excluded(player) || !zone.contains(player.getLocation())) {
             inside.remove(id);
             return;
         }
