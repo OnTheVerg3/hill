@@ -14,7 +14,7 @@ public final class HillConfig {
     private final PlayerFilter assignFilter;
     private final TeamLooks teams;
     private final boolean actionBar;
-    private final boolean bossBar;
+    private final BossBarMode bossBar;
     private final int bossBarWidth;
     private final ScoreHud scoresHud;
     private final int displayUpdateTicks;
@@ -35,7 +35,7 @@ public final class HillConfig {
             PlayerFilter assignFilter,
             TeamLooks teams,
             boolean actionBar,
-            boolean bossBar,
+            BossBarMode bossBar,
             int bossBarWidth,
             ScoreHud scoresHud,
             int displayUpdateTicks,
@@ -54,7 +54,7 @@ public final class HillConfig {
         this.assignFilter = assignFilter;
         this.teams = teams;
         this.actionBar = actionBar;
-        this.bossBar = bossBar;
+        this.bossBar = bossBar == null ? BossBarMode.ON : bossBar;
         this.bossBarWidth = bossBarWidth;
         this.scoresHud = scoresHud == null ? ScoreHud.IN_ZONE : scoresHud;
         this.displayUpdateTicks = displayUpdateTicks;
@@ -78,7 +78,7 @@ public final class HillConfig {
                 PlayerFilter.load(yaml, "assign", true, List.of(GameMode.SPECTATOR, GameMode.CREATIVE));
         TeamLooks teams = loadTeams(yaml);
         boolean actionBar = yaml.getBoolean("display.action-bar", true);
-        boolean bossBar = yaml.getBoolean("display.boss-bar", true);
+        BossBarMode bossBar = BossBarMode.parse(yaml.get("display.boss-bar"));
         int bossBarWidth = FiniteNumbers.optionalInt(yaml, "display.boss-bar-width", 24);
         if (bossBarWidth < 8) {
             throw new ConfigException("display.boss-bar-width must be >= 8");
@@ -144,7 +144,7 @@ public final class HillConfig {
                 new PlayerFilter(true, List.of(GameMode.SPECTATOR, GameMode.CREATIVE)),
                 TeamLooks.defaults(),
                 true,
-                true,
+                BossBarMode.ON,
                 24,
                 ScoreHud.IN_ZONE,
                 20,
@@ -214,10 +214,22 @@ public final class HillConfig {
     }
 
     public boolean bossBar() {
+        return bossBar.enabled();
+    }
+
+    public boolean bossBarAlways() {
+        return bossBar.always();
+    }
+
+    public BossBarMode bossBarMode() {
         return bossBar;
     }
 
     public HillConfig withBossBar(boolean enabled) {
+        return withBossBarMode(enabled ? BossBarMode.ON : BossBarMode.OFF);
+    }
+
+    public HillConfig withBossBarMode(BossBarMode mode) {
         return new HillConfig(
                 locale,
                 intervalSeconds,
@@ -227,7 +239,7 @@ public final class HillConfig {
                 assignFilter,
                 teams,
                 actionBar,
-                enabled,
+                mode == null ? BossBarMode.ON : mode,
                 bossBarWidth,
                 scoresHud,
                 displayUpdateTicks,

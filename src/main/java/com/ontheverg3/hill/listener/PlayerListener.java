@@ -18,7 +18,7 @@ public final class PlayerListener implements Listener {
     public void onJoin(PlayerJoinEvent event) {
         var player = event.getPlayer();
         plugin.hills().rememberPlayer(player);
-        plugin.display().consider(player);
+        player.getScheduler().run(plugin, scheduled -> plugin.display().refresh(player), null);
         var config = plugin.config();
         if (config != null) {
             if (config.skipWithoutAddress() && player.getAddress() == null) {

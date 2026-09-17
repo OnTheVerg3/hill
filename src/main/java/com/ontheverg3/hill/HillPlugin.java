@@ -1,6 +1,7 @@
 package com.ontheverg3.hill;
 
 import com.ontheverg3.hill.command.HillCommand;
+import com.ontheverg3.hill.config.BossBarMode;
 import com.ontheverg3.hill.config.ConfigException;
 import com.ontheverg3.hill.config.HillConfig;
 import com.ontheverg3.hill.game.DisplayService;
@@ -139,13 +140,18 @@ public final class HillPlugin extends JavaPlugin {
     }
 
     public void setBossBarEnabled(boolean enabled) {
-        if (config != null && config.bossBar() == enabled) {
+        setBossBarMode(enabled ? BossBarMode.ON : BossBarMode.OFF);
+    }
+
+    public void setBossBarMode(BossBarMode mode) {
+        BossBarMode next = mode == null ? BossBarMode.ON : mode;
+        if (config != null && config.bossBarMode() == next) {
             return;
         }
-        getConfig().set("display.boss-bar", enabled);
+        getConfig().set("display.boss-bar", next.yamlValue());
         saveConfig();
         if (config != null) {
-            this.config = config.withBossBar(enabled);
+            this.config = config.withBossBarMode(next);
         }
         if (display != null) {
             display.refreshEveryone();

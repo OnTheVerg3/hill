@@ -10,6 +10,7 @@ import java.util.concurrent.ConcurrentMap;
 import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
+import org.bukkit.Location;
 import org.bukkit.entity.Player;
 
 public final class DisplayService {
@@ -27,15 +28,17 @@ public final class DisplayService {
     public void start() {
         stop(false);
         hudClients.clear();
-        for (Player player : Bukkit.getOnlinePlayers()) {
-            consider(player);
-        }
+        refreshEveryone();
         long ticks = Math.max(1L, plugin.config().displayUpdateTicks());
         task = Bukkit.getGlobalRegionScheduler().runAtFixedRate(plugin, scheduled -> tick(), ticks, ticks);
     }
 
     public void consider(Player player) {
-        if (player == null || !player.isOnline() || !shouldRender(player) || !inScoreHud(player)) {
+        consider(player, player == null ? null : player.getLocation());
+    }
+
+    private void consider(Player player, Location at) {
+        if (player == null || !player.isOnline() || !shouldRender(player) || !wantsHud(player, at)) {
             if (player != null) {
                 hudClients.remove(player.getUniqueId());
             }
@@ -101,10 +104,14 @@ public final class DisplayService {
     }
 
     public void refresh(Player player) {
+        refresh(player, player == null ? null : player.getLocation());
+    }
+
+    public void refresh(Player player, Location at) {
         if (player == null || !player.isOnline()) {
             return;
         }
-        consider(player);
+        consider(player, at);
         if (!hudClients.containsKey(player.getUniqueId())) {
             if (plugin.config() != null && plugin.config().actionBar()) {
                 player.sendActionBar(Component.empty());
@@ -112,7 +119,7 @@ public final class DisplayService {
             hideBossBar(player);
             return;
         }
-        render(player);
+        render(player, at);
     }
 
     public int lastHudClients() {
@@ -120,6 +127,16 @@ public final class DisplayService {
     }
 
     private void tick() {
+        var config = plugin.config();
+        if (config != null && config.bossBarAlways()) {
+            int clients = 0;
+            for (Player player : Bukkit.getOnlinePlayers()) {
+                clients++;
+                player.getScheduler().run(plugin, scheduled -> refresh(player), null);
+            }
+            lastHudClients = clients;
+            return;
+        }
         int clients = 0;
         for (UUID id : hudClients.keySet()) {
             Player player = Bukkit.getPlayer(id);
@@ -128,7 +145,7 @@ public final class DisplayService {
                 continue;
             }
             clients++;
-            player.getScheduler().run(plugin, scheduled -> render(player), null);
+            player.getScheduler().run(plugin, scheduled -> refresh(player), null);
         }
         lastHudClients = clients;
     }
@@ -148,29 +165,47 @@ public final class DisplayService {
         return prefix.isEmpty() || !player.getName().startsWith(prefix);
     }
 
-    private boolean inScoreHud(Player player) {
+    private boolean inScoreHud(Location loc) {
         var config = plugin.config();
-        if (config == null || config.scoresHud().always()) {
+        if (config == null) {
             return true;
         }
-        return plugin.hills().containing(player.getLocation()) != null;
+        return config.scoresHud().visible(plugin.hills().containing(loc) != null);
     }
 
-    private boolean wantsBossBar() {
+    private boolean wantsActionBar(Location loc) {
         var config = plugin.config();
-        return config != null && config.bossBar();
+        return config != null && config.actionBar() && inScoreHud(loc);
     }
 
-    private void render(Player player) {
+    private boolean wantsBossBar(Location loc) {
+        var config = plugin.config();
+        if (config == null || !config.bossBar()) {
+            return false;
+        }
+        return config.bossBarAlways() || inScoreHud(loc);
+    }
+
+    private boolean wantsHud(Player player, Location at) {
+        Location loc = at != null ? at : player.getLocation();
+        return wantsActionBar(loc) || wantsBossBar(loc);
+    }
+
+    private void render(Player player, Location at) {
         if (!player.isOnline()) {
             return;
         }
-        HillInstance hill = plugin.hills().containing(player.getLocation());
+        Location loc = at != null ? at : player.getLocation();
+        HillInstance hill = plugin.hills().containing(loc);
         HudFrame current = HudFrame.capture(plugin, hill);
         if (plugin.config().actionBar()) {
-            player.sendActionBar(current.actionBar());
+            if (wantsActionBar(loc)) {
+                player.sendActionBar(current.actionBar());
+            } else {
+                player.sendActionBar(Component.empty());
+            }
         }
-        if (!wantsBossBar()) {
+        if (!wantsBossBar(loc)) {
             hideBossBar(player);
             return;
         }

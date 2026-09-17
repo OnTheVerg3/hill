@@ -28,5 +28,7 @@ class HillHelpTest {
         HillHelp.Topic topic = HillHelp.byName("bossbar").orElseThrow();
         assertTrue(topic.summary().contains("everyone"));
         assertTrue(topic.notes().contains("display.boss-bar"));
+        assertTrue(topic.usage().contains("alwayson"));
+        assertTrue(topic.notes().contains("alwayson"));
     }
 }

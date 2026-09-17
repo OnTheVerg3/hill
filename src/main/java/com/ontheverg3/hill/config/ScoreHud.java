@@ -22,6 +22,10 @@ public enum ScoreHud {
         return this == ALWAYS;
     }
 
+    public boolean visible(boolean insideHill) {
+        return always() || insideHill;
+    }
+
     public String id() {
         return this == ALWAYS ? "always" : "in-zone";
     }

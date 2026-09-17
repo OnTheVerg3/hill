@@ -135,9 +135,9 @@ public final class HillHelp {
                     "bossbar",
                     "hill.bossbar",
                     "Show or hide the score boss bar for everyone",
-                    "/hill bossbar [on|off|toggle]",
-                    "Writes display.boss-bar. Does not hide the action bar. display.scores still chooses always vs in-zone.",
-                    List.of("/hill bossbar", "/hill bossbar off", "/hill bossbar on")),
+                    "/hill bossbar [on|off|toggle|alwayson]",
+                    "Writes display.boss-bar. on follows display.scores (in-zone or always). alwayson keeps the boss bar visible everywhere. off hides it. Does not hide the action bar.",
+                    List.of("/hill bossbar", "/hill bossbar off", "/hill bossbar on", "/hill bossbar alwayson")),
             new Topic(
                     "pad",
                     "hill.pad",

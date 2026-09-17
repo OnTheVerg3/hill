@@ -31,7 +31,7 @@ team2-color: yellow
 
 display:
   action-bar: true
-  # Split score bar. Each side is that team's share of the combined score. Admins set this, or /hill bossbar.
+  # Split score bar. true/on follows display.scores. always keeps it visible everywhere. false hides it. /hill bossbar writes this.
   boss-bar: true
   boss-bar-width: 24
   # always = scores HUD everywhere. in-zone = only while standing in a hill.

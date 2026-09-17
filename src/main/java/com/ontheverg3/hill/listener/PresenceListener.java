@@ -47,7 +47,7 @@ public final class PresenceListener implements Listener {
         boolean assigned = plugin.scoring().syncHere(player, to);
         HillInstance toHill = plugin.hills().containing(to);
         if (assigned || fromHill != toHill) {
-            plugin.display().refresh(player);
+            plugin.display().refresh(player, to);
         }
     }
 

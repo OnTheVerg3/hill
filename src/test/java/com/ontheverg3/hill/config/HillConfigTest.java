@@ -19,6 +19,23 @@ class HillConfigTest {
         assertEquals(on.actionBar(), off.actionBar());
         assertEquals(on.bossBarWidth(), off.bossBarWidth());
         assertEquals(on.scoresHud(), off.scoresHud());
+        HillConfig always = on.withBossBarMode(BossBarMode.ALWAYS);
+        assertTrue(always.bossBarAlways());
+        assertTrue(always.bossBar());
+        assertFalse(on.bossBarAlways());
+    }
+
+    @Test
+    void loadAcceptsAlwaysBossBar() throws Exception {
+        YamlConfiguration yaml = baseConfig();
+        yaml.set("display.boss-bar", "always");
+        HillConfig loaded = HillConfig.load(yaml);
+        assertTrue(loaded.bossBar());
+        assertTrue(loaded.bossBarAlways());
+        yaml.set("display.boss-bar", true);
+        HillConfig on = HillConfig.load(yaml);
+        assertTrue(on.bossBar());
+        assertFalse(on.bossBarAlways());
     }
 
     @Test

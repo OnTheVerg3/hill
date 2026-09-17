@@ -60,7 +60,7 @@ permissions:
     description: Add or remove global team score
     default: op
   hill.bossbar:
-    description: Show or hide the score boss bar for everyone
+    description: Show, hide, or always-show the score boss bar for everyone
     default: op
   hill.pad:
     description: Create or remove team assign pads

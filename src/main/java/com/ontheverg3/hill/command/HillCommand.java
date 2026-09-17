@@ -6,6 +6,7 @@ import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import com.mojang.brigadier.tree.LiteralCommandNode;
 import com.ontheverg3.hill.HillPlugin;
+import com.ontheverg3.hill.config.BossBarMode;
 import com.ontheverg3.hill.config.ConfigException;
 import com.ontheverg3.hill.config.FiniteNumbers;
 import com.ontheverg3.hill.game.HillInstance;
@@ -699,23 +700,34 @@ public final class HillCommand {
             return;
         }
         Lang lang = plugin.lang();
-        boolean toggle = args.length < 2 || args[1].equalsIgnoreCase("toggle");
-        Boolean requested = null;
-        if (!toggle && args.length >= 2) {
-            String token = args[1].toLowerCase(Locale.ROOT);
+        String usage = "/hill bossbar [on|off|toggle|alwayson]";
+        BossBarMode current = plugin.config() == null ? BossBarMode.ON : plugin.config().bossBarMode();
+        BossBarMode next;
+        if (args.length < 2 || args[1].equalsIgnoreCase("toggle")) {
+            next = current.enabled() ? BossBarMode.OFF : BossBarMode.ON;
+        } else {
+            String token = args[1].toLowerCase(Locale.ROOT).replace('_', '-');
             if (token.equals("on") || token.equals("true") || token.equals("enable")) {
-                requested = true;
+                next = BossBarMode.ON;
             } else if (token.equals("off") || token.equals("false") || token.equals("disable")) {
-                requested = false;
+                next = BossBarMode.OFF;
+            } else if (token.equals("alwayson")
+                    || token.equals("always-on")
+                    || token.equals("always")) {
+                next = BossBarMode.ALWAYS;
             } else {
-                lang.send(sender, "error-usage", lang.unparsed("usage", "/hill bossbar [on|off|toggle]"));
+                lang.send(sender, "error-usage", lang.unparsed("usage", usage));
                 return;
             }
         }
-        boolean current = plugin.config() != null && plugin.config().bossBar();
-        boolean visible = requested == null ? !current : requested;
-        plugin.setBossBarEnabled(visible);
-        lang.send(sender, visible ? "bossbar-on" : "bossbar-off");
+        plugin.setBossBarMode(next);
+        String key =
+                switch (next) {
+                    case ALWAYS -> "bossbar-alwayson";
+                    case ON -> "bossbar-on";
+                    case OFF -> "bossbar-off";
+                };
+        lang.send(sender, key);
     }
 
     private void pad(CommandSender sender, String[] args) {
@@ -1078,7 +1090,7 @@ public final class HillCommand {
                 yield names;
             }
             case "autodivide" -> args.length == 2 || args.length == 3 ? List.of("50%", "70%", "30%", "60%", "40%") : List.of();
-            case "bossbar" -> args.length == 2 ? List.of("on", "off", "toggle") : List.of();
+            case "bossbar" -> args.length == 2 ? List.of("on", "off", "toggle", "alwayson") : List.of();
             case "pad" -> {
                 if (args.length == 2) {
                     List<String> tokens = new ArrayList<>(teamTokens());

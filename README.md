@@ -16,7 +16,7 @@ Default mode is **KotH**: at most one hill per world save and dimension (overwor
 
 The 2D footprint of each hill is outlined with gold dust particles. The ring follows the true circle or rectangle and sits on top of the terrain, including uneven ground. A hill in the air, or over empty space below its volume, is drawn flat at the hill's height.
 
-Players see scores on the action bar and on a split boss bar. The boss bar title is two colors by score ratio. The vanilla bar under it fills with the leader's share of the combined score, in that team's color. Vanilla cannot hide that bar. Admins turn the boss bar on or off for everyone with `display.boss-bar` or `/hill bossbar`. `display.scores` chooses whether this HUD is always on, or only while standing in a hill.
+Players see scores on the action bar and on a split boss bar. The boss bar title is two colors by score ratio. The vanilla bar under it fills with the leader's share of the combined score, in that team's color. Vanilla cannot hide that bar. Admins control the boss bar with `display.boss-bar` or `/hill bossbar`: `on` follows `display.scores`, `alwayson` keeps it visible everywhere, `off` hides it. `display.scores` chooses whether the action bar (and a non-alwayson boss bar) is always on, or only while standing in a hill.
 
 Stand on a team pad to join that team if you have no team, or to switch if you are on the other team. Standing on your own pad does nothing.
 
@@ -68,7 +68,7 @@ Occupancy uses the player's exact X, Y, and Z, not the block they stand on. `/hi
 | `/hill perf <hill id\|all>` | Occupancy sample timing |
 | `/hill autodivide <blue%> <yellow%>` | Shuffle-split players who pass `assign:` in config. Excluded players are not assigned and are removed from a team if they had one |
 | `/hill score <add\|remove> <amount> <blue\|yellow>` | Change a team's global score |
-| `/hill bossbar [on\|off\|toggle]` | Show or hide the split score boss bar for everyone. Writes `display.boss-bar`. Does not hide the action bar |
+| `/hill bossbar [on\|off\|toggle\|alwayson]` | Show or hide the split score boss bar for everyone. `on` follows `display.scores`. `alwayson` keeps it visible everywhere. Writes `display.boss-bar`. Does not hide the action bar |
 | `/hill pad <blue\|yellow\|remove> [x1 y1 z1 x2 y2 z2]` | Create a team pad. No coords uses the block you are standing on. Standing in a pad assigns you if you have no team or are on the other team. `remove` deletes the pad you are in |
 
 Aliases: `/koth`. Relative `~` coordinates need a player.
@@ -114,7 +114,7 @@ These are normal Bukkit permission nodes. LuckPerms and vanilla operators both w
 | `team2-displayname` | Yellow | Visible name for the second team |
 | `team2-color` | yellow | Same color rules as team 1 |
 | `display.action-bar` | true | Action bar HUD |
-| `display.boss-bar` | true | Split score boss bar for everyone. Title is the two-color ratio. The vanilla track under it is the leader's share. `/hill bossbar` writes this |
+| `display.boss-bar` | true | Split score boss bar. `true`/`on` follows `display.scores`. `always` keeps it visible everywhere. `false` hides it. `/hill bossbar` writes this |
 | `display.boss-bar-width` | 24 | Segments in the title fill (even, 8 to 64) |
 | `display.scores` | in-zone | `always` shows the score HUD everywhere. `in-zone` only while standing in a hill |
 | `display.update-ticks` | 20 | How often the HUD refreshes |
