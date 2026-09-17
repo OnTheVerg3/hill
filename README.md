@@ -10,7 +10,7 @@ Needs Folia 1.21.11. `folia-supported` is already set.
 2. Start once so it writes `plugins/Hill/config.yml` and `plugins/Hill/lang/en.yml`
 3. Create a hill in-game with `/hill new`
 
-Hills are stored in `plugins/Hill/hills.json` (position, size, shape, world, dimension, team pads). Teams and **global** scores are stored in `plugins/Hill/data.yml` (`scores.blue` / `scores.yellow`). Pause is per hill. Hill ids are global. World save and dimension are stored with each hill; they are not part of the id.
+Hills are stored in `plugins/Hill/hills.json` (position, size, shape, world, dimension, team pads). Teams and **global** scores are stored in `plugins/Hill/data.yml` (`scores.blue` / `scores.yellow`). Pause is per hill. Hill ids are global. World save and dimension are stored with each hill.
 
 Default mode is **KotH**: at most one hill per world save and dimension (overworld, nether, and the end can each have one). **CTF** allows more than one hill. Switching modes deletes every hill and resets every score after a clickable confirm in chat. Team assignments are kept.
 
