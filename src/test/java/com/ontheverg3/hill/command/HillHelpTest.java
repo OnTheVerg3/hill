@@ -22,4 +22,11 @@ class HillHelpTest {
         assertEquals("assign", HillHelp.byName("Assign").orElseThrow().name());
         assertTrue(HillHelp.byName("nope").isEmpty());
     }
+
+    @Test
+    void bossbarIsGlobalNotPersonal() {
+        HillHelp.Topic topic = HillHelp.byName("bossbar").orElseThrow();
+        assertTrue(topic.summary().contains("everyone"));
+        assertTrue(topic.notes().contains("display.boss-bar"));
+    }
 }

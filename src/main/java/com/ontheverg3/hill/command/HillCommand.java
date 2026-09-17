@@ -698,14 +698,6 @@ public final class HillCommand {
             return;
         }
         Lang lang = plugin.lang();
-        if (!(sender instanceof Player player)) {
-            lang.send(sender, "error-player-only");
-            return;
-        }
-        if (!plugin.config().bossBar()) {
-            lang.send(sender, "bossbar-disabled");
-            return;
-        }
         boolean toggle = args.length < 2 || args[1].equalsIgnoreCase("toggle");
         Boolean requested = null;
         if (!toggle && args.length >= 2) {
@@ -719,16 +711,9 @@ public final class HillCommand {
                 return;
             }
         }
-        boolean visible;
-        if (requested == null) {
-            visible = plugin.display().toggleBossBar(player.getUniqueId());
-        } else {
-            plugin.display().setBossBarVisible(player.getUniqueId(), requested);
-            visible = requested;
-        }
-        if (!visible) {
-            plugin.display().hideBossBar(player);
-        }
+        boolean current = plugin.config() != null && plugin.config().bossBar();
+        boolean visible = requested == null ? !current : requested;
+        plugin.setBossBarEnabled(visible);
         lang.send(sender, visible ? "bossbar-on" : "bossbar-off");
     }
 

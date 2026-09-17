@@ -16,7 +16,6 @@ public final class DisplayService {
     private final HillPlugin plugin;
     private final ConcurrentHashMap<UUID, BossBar> bars = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, Integer> lastBossHash = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<UUID, Boolean> hiddenBossBars = new ConcurrentHashMap<>();
     private final ConcurrentMap<UUID, Boolean> hudClients = new ConcurrentHashMap<>();
     private ScheduledTask task;
     private volatile int lastHudClients;
@@ -45,24 +44,9 @@ public final class DisplayService {
         hudClients.put(player.getUniqueId(), Boolean.TRUE);
     }
 
-    public boolean bossBarVisible(UUID id) {
-        return !hiddenBossBars.containsKey(id);
-    }
-
-    public boolean toggleBossBar(UUID id) {
-        if (bossBarVisible(id)) {
-            hiddenBossBars.put(id, Boolean.TRUE);
-            return false;
-        }
-        hiddenBossBars.remove(id);
-        return true;
-    }
-
-    public void setBossBarVisible(UUID id, boolean visible) {
-        if (visible) {
-            hiddenBossBars.remove(id);
-        } else {
-            hiddenBossBars.put(id, Boolean.TRUE);
+    public void refreshEveryone() {
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            player.getScheduler().run(plugin, scheduled -> refresh(player), null);
         }
     }
 
@@ -86,7 +70,6 @@ public final class DisplayService {
             bars.clear();
             lastBossHash.clear();
             hudClients.clear();
-            hiddenBossBars.clear();
             return;
         }
         for (UUID id : java.util.List.copyOf(hudClients.keySet())) {
@@ -173,9 +156,9 @@ public final class DisplayService {
         return plugin.hills().containing(player.getLocation()) != null;
     }
 
-    private boolean wantsBossBar(Player player) {
+    private boolean wantsBossBar() {
         var config = plugin.config();
-        return config != null && config.bossBar() && bossBarVisible(player.getUniqueId());
+        return config != null && config.bossBar();
     }
 
     private void render(Player player) {
@@ -187,7 +170,7 @@ public final class DisplayService {
         if (plugin.config().actionBar()) {
             player.sendActionBar(current.actionBar());
         }
-        if (!wantsBossBar(player)) {
+        if (!wantsBossBar()) {
             hideBossBar(player);
             return;
         }

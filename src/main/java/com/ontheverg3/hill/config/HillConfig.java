@@ -217,6 +217,29 @@ public final class HillConfig {
         return bossBar;
     }
 
+    public HillConfig withBossBar(boolean enabled) {
+        return new HillConfig(
+                locale,
+                intervalSeconds,
+                points,
+                winScore,
+                scoringFilter,
+                assignFilter,
+                teams,
+                actionBar,
+                enabled,
+                bossBarWidth,
+                scoresHud,
+                displayUpdateTicks,
+                skipWithoutAddress,
+                ignoreNamePrefix,
+                resetClearsTeams,
+                reloadResets,
+                outlineEnabled,
+                outlineIntervalTicks,
+                outlinePoints);
+    }
+
     public int bossBarWidth() {
         return bossBarWidth;
     }

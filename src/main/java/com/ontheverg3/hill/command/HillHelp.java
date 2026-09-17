@@ -134,10 +134,10 @@ public final class HillHelp {
             new Topic(
                     "bossbar",
                     "hill.bossbar",
-                    "Show or hide the score boss bar for yourself",
+                    "Show or hide the score boss bar for everyone",
                     "/hill bossbar [on|off|toggle]",
-                    "Does not hide the action bar. display.boss-bar in config turns it off for everyone.",
-                    List.of("/hill bossbar", "/hill bossbar off")),
+                    "Writes display.boss-bar. Does not hide the action bar. display.scores still chooses always vs in-zone.",
+                    List.of("/hill bossbar", "/hill bossbar off", "/hill bossbar on")),
             new Topic(
                     "pad",
                     "hill.pad",

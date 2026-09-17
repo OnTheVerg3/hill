@@ -133,6 +133,20 @@ public final class HillPlugin extends JavaPlugin {
         return config;
     }
 
+    public void setBossBarEnabled(boolean enabled) {
+        if (config != null && config.bossBar() == enabled) {
+            return;
+        }
+        getConfig().set("display.boss-bar", enabled);
+        saveConfig();
+        if (config != null) {
+            this.config = config.withBossBar(enabled);
+        }
+        if (display != null) {
+            display.refreshEveryone();
+        }
+    }
+
     public HillRegistry hills() {
         return hills;
     }
