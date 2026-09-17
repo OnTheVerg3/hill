@@ -14,9 +14,11 @@ import org.bukkit.HeightMap;
 import org.bukkit.Particle;
 import org.bukkit.World;
 import org.bukkit.block.Block;
+import org.bukkit.util.BoundingBox;
 
 public final class OutlineService {
     private static final Particle.DustOptions DUST = new Particle.DustOptions(Color.fromRGB(255, 196, 48), 1.15f);
+    static final double SURFACE_LIFT = 0.12;
 
     private final HillPlugin plugin;
     private ScheduledTask task;
@@ -56,38 +58,56 @@ public final class OutlineService {
             if (world == null) {
                 continue;
             }
-            Map<Long, List<int[]>> byChunk = new HashMap<>();
+            Map<Long, List<double[]>> byChunk = new HashMap<>();
             for (double[] xz : footprint(hill.spec(), count)) {
                 int bx = (int) Math.floor(xz[0]);
                 int bz = (int) Math.floor(xz[1]);
                 long key = (((long) (bx >> 4)) << 32) ^ Integer.toUnsignedLong(bz >> 4);
-                byChunk.computeIfAbsent(key, ignored -> new ArrayList<>()).add(new int[] {bx, bz});
+                byChunk.computeIfAbsent(key, ignored -> new ArrayList<>()).add(xz);
             }
-            for (List<int[]> points : byChunk.values()) {
-                int[] first = points.get(0);
+            for (List<double[]> points : byChunk.values()) {
+                double[] first = points.get(0);
+                int chunkX = (int) Math.floor(first[0]) >> 4;
+                int chunkZ = (int) Math.floor(first[1]) >> 4;
                 Bukkit.getRegionScheduler()
-                        .run(plugin, world, first[0] >> 4, first[1] >> 4, scheduled -> spawnChunk(world, hill.spec(), points));
+                        .run(plugin, world, chunkX, chunkZ, scheduled -> spawnChunk(world, hill.spec(), points));
             }
         }
     }
 
-    private void spawnChunk(World world, HillSpec spec, List<int[]> points) {
+    private void spawnChunk(World world, HillSpec spec, List<double[]> points) {
         int minY = (int) Math.floor(spec.y() - spec.ry());
-        for (int[] point : points) {
-            if (!world.isChunkLoaded(point[0] >> 4, point[1] >> 4)) {
+        for (double[] point : points) {
+            int bx = (int) Math.floor(point[0]);
+            int bz = (int) Math.floor(point[1]);
+            if (!world.isChunkLoaded(bx >> 4, bz >> 4)) {
                 continue;
             }
-            int surface = world.getHighestBlockYAt(point[0], point[1], HeightMap.MOTION_BLOCKING);
-            Block block = world.getBlockAt(point[0], surface, point[1]);
+            int surface = world.getHighestBlockYAt(bx, bz, HeightMap.MOTION_BLOCKING);
+            Block block = world.getBlockAt(bx, surface, bz);
+            if (block.isEmpty()) {
+                block = world.getBlockAt(bx, surface - 1, bz);
+                surface = surface - 1;
+            }
             boolean floating = block.isEmpty() || block.isLiquid() || surface < minY - 1;
-            double x = point[0] + 0.5;
-            double z = point[1] + 0.5;
-            double y = floating ? spec.y() : surface + 0.12;
-            world.spawnParticle(Particle.DUST, x, y, z, 1, 0.0, 0.0, 0.0, 0.0, DUST, true);
+            double y = spawnY(spec.y(), floating, topOf(block, surface));
+            world.spawnParticle(Particle.DUST, point[0], y, point[1], 1, 0.0, 0.0, 0.0, 0.0, DUST, true);
         }
     }
 
-    private static List<double[]> footprint(HillSpec spec, int count) {
+    static double spawnY(double specY, boolean floating, double surfaceTopY) {
+        return floating ? specY : surfaceTopY + SURFACE_LIFT;
+    }
+
+    static double topOf(Block block, int surfaceY) {
+        BoundingBox box = block.getBoundingBox();
+        if (box.getHeight() <= 0.0) {
+            return surfaceY + 1.0;
+        }
+        return box.getMaxY();
+    }
+
+    static List<double[]> footprint(HillSpec spec, int count) {
         List<double[]> points = new ArrayList<>(count);
         if (spec.shape().circularFootprint()) {
             for (int i = 0; i < count; i++) {

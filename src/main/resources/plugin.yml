@@ -59,6 +59,9 @@ permissions:
   hill.score:
     description: Add or remove team score on a hill
     default: op
+  hill.bossbar:
+    description: Toggle the score boss bar for yourself
+    default: true
   hill.admin:
     description: All Hill commands
     default: op
@@ -79,3 +82,4 @@ permissions:
       hill.perf: true
       hill.autodivide: true
       hill.score: true
+      hill.bossbar: true

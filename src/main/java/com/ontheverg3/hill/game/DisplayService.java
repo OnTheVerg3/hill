@@ -1,6 +1,7 @@
 package com.ontheverg3.hill.game;
 
 import com.ontheverg3.hill.HillPlugin;
+import com.ontheverg3.hill.config.TeamLooks;
 import com.ontheverg3.hill.i18n.Lang;
 import io.papermc.paper.threadedregions.scheduler.ScheduledTask;
 import java.util.UUID;
@@ -15,6 +16,7 @@ public final class DisplayService {
     private final HillPlugin plugin;
     private final ConcurrentHashMap<UUID, BossBar> bars = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, Integer> lastBossHash = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<UUID, Boolean> hiddenBossBars = new ConcurrentHashMap<>();
     private final ConcurrentMap<UUID, Boolean> hudClients = new ConcurrentHashMap<>();
     private ScheduledTask task;
     private volatile int lastHudClients;
@@ -43,6 +45,27 @@ public final class DisplayService {
         hudClients.put(player.getUniqueId(), Boolean.TRUE);
     }
 
+    public boolean bossBarVisible(UUID id) {
+        return !hiddenBossBars.containsKey(id);
+    }
+
+    public boolean toggleBossBar(UUID id) {
+        if (bossBarVisible(id)) {
+            hiddenBossBars.put(id, Boolean.TRUE);
+            return false;
+        }
+        hiddenBossBars.remove(id);
+        return true;
+    }
+
+    public void setBossBarVisible(UUID id, boolean visible) {
+        if (visible) {
+            hiddenBossBars.remove(id);
+        } else {
+            hiddenBossBars.put(id, Boolean.TRUE);
+        }
+    }
+
     public void stop() {
         stop(false);
     }
@@ -63,6 +86,7 @@ public final class DisplayService {
             bars.clear();
             lastBossHash.clear();
             hudClients.clear();
+            hiddenBossBars.clear();
             return;
         }
         for (UUID id : java.util.List.copyOf(hudClients.keySet())) {
@@ -72,7 +96,7 @@ public final class DisplayService {
                 continue;
             }
             player.getScheduler()
-                    .run(plugin, scheduled -> hide(player), () -> {
+                    .run(plugin, scheduled -> hideBossBar(player), () -> {
                         bars.remove(id);
                         lastBossHash.remove(id);
                     });
@@ -80,8 +104,12 @@ public final class DisplayService {
     }
 
     public void hide(Player player) {
+        hudClients.remove(player.getUniqueId());
+        hideBossBar(player);
+    }
+
+    public void hideBossBar(Player player) {
         UUID id = player.getUniqueId();
-        hudClients.remove(id);
         lastBossHash.remove(id);
         BossBar bar = bars.remove(id);
         if (bar != null) {
@@ -115,8 +143,16 @@ public final class DisplayService {
         if (config.skipWithoutAddress() && player.getAddress() == null) {
             return false;
         }
+        if (!config.actionBar() && !config.bossBar()) {
+            return false;
+        }
         String prefix = config.ignoreNamePrefix();
         return prefix.isEmpty() || !player.getName().startsWith(prefix);
+    }
+
+    private boolean wantsBossBar(Player player) {
+        var config = plugin.config();
+        return config != null && config.bossBar() && bossBarVisible(player.getUniqueId());
     }
 
     private void render(Player player) {
@@ -128,14 +164,14 @@ public final class DisplayService {
         if (plugin.config().actionBar()) {
             player.sendActionBar(current.actionBar());
         }
-        if (!plugin.config().bossBar()) {
-            hide(player);
+        if (!wantsBossBar(player) || hill == null) {
+            hideBossBar(player);
             return;
         }
         UUID id = player.getUniqueId();
         BossBar bar = bars.computeIfAbsent(id, ignored -> {
             BossBar created = BossBar.bossBar(
-                    Component.empty(), 1.0f, BossBar.Color.WHITE, BossBar.Overlay.PROGRESS);
+                    Component.empty(), 0.0f, BossBar.Color.WHITE, BossBar.Overlay.PROGRESS);
             player.showBossBar(created);
             return created;
         });
@@ -144,14 +180,12 @@ public final class DisplayService {
             return;
         }
         bar.name(current.bossBar());
-        bar.progress(current.progress());
-        bar.color(current.color());
+        bar.progress(0.0f);
+        bar.color(BossBar.Color.WHITE);
     }
 
-    private record HudFrame(
-            Component actionBar, Component bossBar, float progress, BossBar.Color color, int hash) {
-        private static final HudFrame EMPTY = new HudFrame(
-                Component.empty(), Component.empty(), 1.0f, BossBar.Color.WHITE, 0);
+    private record HudFrame(Component actionBar, Component bossBar, int hash) {
+        private static final HudFrame EMPTY = new HudFrame(Component.empty(), Component.empty(), 0);
 
         private static HudFrame capture(HillPlugin plugin, HillInstance hill) {
             if (hill == null) {
@@ -167,13 +201,16 @@ public final class DisplayService {
             var yellow = lang.number("score_yellow", yellowScore);
             var pointTag = lang.component("point", point);
             Component action = lang.hud("action-bar", blue, yellow, pointTag);
-            Component boss = lang.hud("boss-bar", blue, yellow, pointTag);
-            float progress = progress(plugin, match);
-            BossBar.Color color = barColor(plugin, state);
-            int hash = 31 * (31 * (31 * (31 * state.ordinal() + blueScore) + yellowScore)
+            TeamLooks teams = plugin.config().teams();
+            ScoreBar.Fill fill = ScoreBar.fill(
+                    blueScore, yellowScore, plugin.config().bossBarWidth(), plugin.config().winScore());
+            Component bar = ScoreBar.component(fill, teams.team1().color(), teams.team2().color());
+            Component boss = lang.hud("boss-bar", blue, yellow, pointTag, lang.component("bar", bar));
+            int hash = 31 * (31 * (31 * (31 * (31 * state.ordinal() + blueScore) + yellowScore)
                             + hill.hillId().hashCode())
-                    + Float.hashCode(progress);
-            return new HudFrame(action, boss, progress, color, hash);
+                    + fill.leftFilled())
+                    + fill.rightFilled();
+            return new HudFrame(action, boss, hash);
         }
 
         private static Component pointComponent(Lang lang, PointState state) {
@@ -185,26 +222,6 @@ public final class DisplayService {
                 case UNUSABLE -> "status-point-unusable";
             };
             return lang.hud(key);
-        }
-
-        private static float progress(HillPlugin plugin, MatchState match) {
-            int cap = plugin.config().winScore();
-            if (cap <= 0) {
-                return 1.0f;
-            }
-            int lead = Math.max(match.score(TeamId.BLUE), match.score(TeamId.YELLOW));
-            return Math.min(1.0f, lead / (float) cap);
-        }
-
-        private static BossBar.Color barColor(HillPlugin plugin, PointState state) {
-            var teams = plugin.config() == null ? null : plugin.config().teams();
-            return switch (state) {
-                case CONTROLLED_BLUE -> teams == null ? BossBar.Color.BLUE : teams.team1().bossBarColor();
-                case CONTROLLED_YELLOW -> teams == null ? BossBar.Color.YELLOW : teams.team2().bossBarColor();
-                case CONTESTED -> BossBar.Color.RED;
-                case UNUSABLE -> BossBar.Color.PURPLE;
-                case EMPTY -> BossBar.Color.WHITE;
-            };
         }
     }
 }

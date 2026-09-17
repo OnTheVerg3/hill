@@ -15,6 +15,7 @@ public final class HillConfig {
     private final TeamLooks teams;
     private final boolean actionBar;
     private final boolean bossBar;
+    private final int bossBarWidth;
     private final int displayUpdateTicks;
     private final boolean skipWithoutAddress;
     private final String ignoreNamePrefix;
@@ -34,6 +35,7 @@ public final class HillConfig {
             TeamLooks teams,
             boolean actionBar,
             boolean bossBar,
+            int bossBarWidth,
             int displayUpdateTicks,
             boolean skipWithoutAddress,
             String ignoreNamePrefix,
@@ -51,6 +53,7 @@ public final class HillConfig {
         this.teams = teams;
         this.actionBar = actionBar;
         this.bossBar = bossBar;
+        this.bossBarWidth = bossBarWidth;
         this.displayUpdateTicks = displayUpdateTicks;
         this.skipWithoutAddress = skipWithoutAddress;
         this.ignoreNamePrefix = ignoreNamePrefix;
@@ -71,6 +74,16 @@ public final class HillConfig {
         TeamLooks teams = loadTeams(yaml);
         boolean actionBar = yaml.getBoolean("display.action-bar", true);
         boolean bossBar = yaml.getBoolean("display.boss-bar", true);
+        int bossBarWidth = yaml.getInt("display.boss-bar-width", 24);
+        if (bossBarWidth < 8) {
+            throw new ConfigException("display.boss-bar-width must be >= 8");
+        }
+        if (bossBarWidth > 64) {
+            throw new ConfigException("display.boss-bar-width must be <= 64");
+        }
+        if ((bossBarWidth & 1) != 0) {
+            bossBarWidth++;
+        }
         int updateTicks = requirePositiveInt(yaml, "display.update-ticks");
         boolean skipWithoutAddress = yaml.getBoolean("display.skip-without-address", true);
         String ignoreNamePrefix = yaml.getString("display.ignore-name-prefix", "");
@@ -103,6 +116,7 @@ public final class HillConfig {
                 teams,
                 actionBar,
                 bossBar,
+                bossBarWidth,
                 updateTicks,
                 skipWithoutAddress,
                 ignoreNamePrefix,
@@ -124,6 +138,7 @@ public final class HillConfig {
                 TeamLooks.defaults(),
                 true,
                 true,
+                24,
                 20,
                 true,
                 "",
@@ -196,6 +211,10 @@ public final class HillConfig {
 
     public boolean bossBar() {
         return bossBar;
+    }
+
+    public int bossBarWidth() {
+        return bossBarWidth;
     }
 
     public int displayUpdateTicks() {

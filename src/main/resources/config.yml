@@ -35,7 +35,9 @@ team2-color: yellow
 
 display:
   action-bar: true
+  # Split score bar. Left fills with team 1, right fills with team 2. Players can also /hill bossbar.
   boss-bar: true
+  boss-bar-width: 24
   update-ticks: 20
   # Skip HUD for players with no client connection (some NPCs).
   skip-without-address: true

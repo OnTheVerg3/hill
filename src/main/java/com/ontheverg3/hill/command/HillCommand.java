@@ -50,6 +50,7 @@ public final class HillCommand implements TabExecutor, BasicCommand {
         "hill.perf",
         "hill.autodivide",
         "hill.score",
+        "hill.bossbar",
         "hill.admin"
     };
     private static final long MODE_CONFIRM_NANOS = 60_000_000_000L;
@@ -114,6 +115,7 @@ public final class HillCommand implements TabExecutor, BasicCommand {
             case "perf" -> perf(sender, args);
             case "autodivide" -> autodivide(sender, args);
             case "score" -> score(sender, args);
+            case "bossbar" -> bossBar(sender, args);
             default -> lang.send(sender, "error-unknown-subcommand", Placeholder.parsed("usage", usage()));
         }
         return true;
@@ -611,6 +613,45 @@ public final class HillCommand implements TabExecutor, BasicCommand {
         }
     }
 
+    private void bossBar(CommandSender sender, String[] args) {
+        if (deny(sender, "hill.bossbar")) {
+            return;
+        }
+        Lang lang = plugin.lang();
+        if (!(sender instanceof Player player)) {
+            lang.send(sender, "error-player-only");
+            return;
+        }
+        if (!plugin.config().bossBar()) {
+            lang.send(sender, "bossbar-disabled");
+            return;
+        }
+        boolean toggle = args.length < 2 || args[1].equalsIgnoreCase("toggle");
+        Boolean requested = null;
+        if (!toggle && args.length >= 2) {
+            String token = args[1].toLowerCase(Locale.ROOT);
+            if (token.equals("on") || token.equals("true") || token.equals("enable")) {
+                requested = true;
+            } else if (token.equals("off") || token.equals("false") || token.equals("disable")) {
+                requested = false;
+            } else {
+                lang.send(sender, "error-usage", Placeholder.parsed("usage", "/hill bossbar [on|off|toggle]"));
+                return;
+            }
+        }
+        boolean visible;
+        if (requested == null) {
+            visible = plugin.display().toggleBossBar(player.getUniqueId());
+        } else {
+            plugin.display().setBossBarVisible(player.getUniqueId(), requested);
+            visible = requested;
+        }
+        if (!visible) {
+            plugin.display().hideBossBar(player);
+        }
+        lang.send(sender, visible ? "bossbar-on" : "bossbar-off");
+    }
+
     private void autodivide(CommandSender sender, String[] args) {
         if (deny(sender, "hill.autodivide")) {
             return;
@@ -930,6 +971,7 @@ public final class HillCommand implements TabExecutor, BasicCommand {
                 yield names;
             }
             case "autodivide" -> args.length == 2 || args.length == 3 ? List.of("50%", "70%", "30%", "60%", "40%") : List.of();
+            case "bossbar" -> args.length == 2 ? List.of("on", "off", "toggle") : List.of();
             case "score" -> {
                 if (args.length == 2) {
                     yield List.of("add", "remove");
@@ -967,6 +1009,7 @@ public final class HillCommand implements TabExecutor, BasicCommand {
         addIfPermitted(sender, subs, "perf", "hill.perf");
         addIfPermitted(sender, subs, "autodivide", "hill.autodivide");
         addIfPermitted(sender, subs, "score", "hill.score");
+        addIfPermitted(sender, subs, "bossbar", "hill.bossbar");
         return subs;
     }
 
@@ -1001,7 +1044,7 @@ public final class HillCommand implements TabExecutor, BasicCommand {
     }
 
     private static String usage() {
-        return "/hill <help|reload|mode|new|remove|assign|unassign|status|swapteams|swapscore|pause|resume|reset|perf|autodivide|score> ...";
+        return "/hill <help|reload|mode|new|remove|assign|unassign|status|swapteams|swapscore|pause|resume|reset|perf|autodivide|score|bossbar> ...";
     }
 
     private record PendingMode(UUID actor, HillMode mode, String token, long expiresAt) {}
