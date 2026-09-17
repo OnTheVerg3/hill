@@ -122,15 +122,33 @@ public final class ScoringService {
         if (player == null || !player.isOnline()) {
             return;
         }
-        player.getScheduler().run(plugin, scheduled -> syncHere(player), null);
+        player.getScheduler().run(
+                plugin,
+                scheduled -> {
+                    syncHere(player);
+                    plugin.display().refresh(player);
+                },
+                null);
     }
 
-    public void syncHere(Player player) {
+    public boolean syncHere(Player player) {
         HillConfig config = plugin.config();
         if (config == null || player == null) {
-            return;
+            return false;
         }
         plugin.hills().rememberPlayer(player);
+        boolean assigned = plugin.hills().applyTeamPad(player, config);
+        if (assigned) {
+            plugin.persistMatch();
+            TeamId team = plugin.hills().teams().teamOf(player.getUniqueId());
+            if (team != null) {
+                plugin.lang()
+                        .send(
+                                player,
+                                "pad-join",
+                                plugin.lang().component("team", plugin.lang().hud(team.langKey())));
+            }
+        }
         World world = player.getWorld();
         for (HillInstance hill : plugin.hills().all()) {
             if (world != null && world.equals(hill.zone().worldOrNull())) {
@@ -139,6 +157,7 @@ public final class ScoringService {
                 hill.tracker().remove(player.getUniqueId());
             }
         }
+        return assigned;
     }
 
     public void forget(UUID id) {
@@ -179,7 +198,7 @@ public final class ScoringService {
         if (winner == null) {
             return;
         }
-        match.award(winner, plugin.config().points(), plugin.config().winScore());
+        plugin.hills().teams().award(winner, plugin.config().points(), plugin.config().winScore());
         persistAward();
     }
 

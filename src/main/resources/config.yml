@@ -11,8 +11,6 @@ scoring:
 # Who can score while standing in a hill.
 eligibility:
   exclude-dead: true
-  exclude-spectator: true
-  exclude-creative: false
   exclude-gamemodes:
     - SPECTATOR
 
@@ -20,8 +18,6 @@ eligibility:
 # and /hill autodivide (always).
 assign:
   exclude-dead: true
-  exclude-spectator: true
-  exclude-creative: true
   exclude-gamemodes:
     - SPECTATOR
     - CREATIVE
@@ -35,9 +31,11 @@ team2-color: yellow
 
 display:
   action-bar: true
-  # Split score bar. Left fills with team 1, right fills with team 2. Players can also /hill bossbar.
+  # Split score bar. Each side is that team's share of the combined score. Players can also /hill bossbar.
   boss-bar: true
   boss-bar-width: 24
+  # always = scores HUD everywhere. in-zone = only while standing in a hill.
+  scores: in-zone
   update-ticks: 20
   # Skip HUD for players with no client connection (some NPCs).
   skip-without-address: true

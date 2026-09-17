@@ -47,6 +47,8 @@ public final class PlaceholderQuery {
             case "team_yellow" -> nullToEmpty(context.yellowDisplay());
             case "team_color_blue" -> nullToEmpty(context.blueColor());
             case "team_color_yellow" -> nullToEmpty(context.yellowColor());
+            case "score_blue" -> Integer.toString(context.blueScore());
+            case "score_yellow" -> Integer.toString(context.yellowScore());
             default -> resolveRest(params, viewer, context);
         };
     }
@@ -54,19 +56,19 @@ public final class PlaceholderQuery {
     private static String resolveRest(String params, UUID viewer, Context context) {
         for (String key : HERE_KEYS) {
             if (params.equals(key)) {
-                return hereValue(key, context.occupying().apply(viewer));
+                return hereValue(key, context.occupying().apply(viewer), context);
             }
         }
         for (String prefix : HILL_PREFIXES) {
             if (params.startsWith(prefix)) {
                 String id = params.substring(prefix.length());
-                return hillValue(prefix, context.byId().apply(id));
+                return hillValue(prefix, context.byId().apply(id), context);
             }
         }
         return null;
     }
 
-    private static String hereValue(String key, HillInstance hill) {
+    private static String hereValue(String key, HillInstance hill, Context context) {
         if (hill == null) {
             return "";
         }
@@ -75,19 +77,19 @@ public final class PlaceholderQuery {
             case "here_display" -> hill.display();
             case "here_state" -> stateToken(hill.match().pointState());
             case "here_paused" -> Boolean.toString(hill.match().paused());
-            case "here_score_blue" -> Integer.toString(hill.match().score(TeamId.BLUE));
-            case "here_score_yellow" -> Integer.toString(hill.match().score(TeamId.YELLOW));
+            case "here_score_blue" -> Integer.toString(context.blueScore());
+            case "here_score_yellow" -> Integer.toString(context.yellowScore());
             default -> "";
         };
     }
 
-    private static String hillValue(String prefix, HillInstance hill) {
+    private static String hillValue(String prefix, HillInstance hill, Context context) {
         if (hill == null) {
             return "";
         }
         return switch (prefix) {
-            case "score_blue_" -> Integer.toString(hill.match().score(TeamId.BLUE));
-            case "score_yellow_" -> Integer.toString(hill.match().score(TeamId.YELLOW));
+            case "score_blue_" -> Integer.toString(context.blueScore());
+            case "score_yellow_" -> Integer.toString(context.yellowScore());
             case "state_", "control_" -> stateToken(hill.match().pointState());
             case "paused_" -> Boolean.toString(hill.match().paused());
             case "display_" -> hill.display();
@@ -132,7 +134,9 @@ public final class PlaceholderQuery {
             String blueDisplay,
             String yellowDisplay,
             String blueColor,
-            String yellowColor) {
+            String yellowColor,
+            int blueScore,
+            int yellowScore) {
         public Context {
             ids = ids == null ? List.of() : List.copyOf(ids);
             byId = byId == null ? id -> null : byId;
@@ -143,6 +147,8 @@ public final class PlaceholderQuery {
             blueColor = blueColor == null ? "#5555ff" : blueColor;
             yellowColor = yellowColor == null ? "#ffff55" : yellowColor;
             mode = mode == null ? HillMode.KOTH : mode;
+            blueScore = Math.max(0, blueScore);
+            yellowScore = Math.max(0, yellowScore);
         }
     }
 }

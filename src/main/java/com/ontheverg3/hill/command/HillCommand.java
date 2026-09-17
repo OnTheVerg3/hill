@@ -1,38 +1,41 @@
 package com.ontheverg3.hill.command;
 
+import com.mojang.brigadier.arguments.StringArgumentType;
+import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+import com.mojang.brigadier.suggestion.Suggestions;
+import com.mojang.brigadier.suggestion.SuggestionsBuilder;
+import com.mojang.brigadier.tree.LiteralCommandNode;
 import com.ontheverg3.hill.HillPlugin;
 import com.ontheverg3.hill.config.ConfigException;
 import com.ontheverg3.hill.game.HillInstance;
 import com.ontheverg3.hill.game.HillMode;
 import com.ontheverg3.hill.game.PointState;
 import com.ontheverg3.hill.game.TeamId;
+import com.ontheverg3.hill.game.TeamPad;
 import com.ontheverg3.hill.i18n.Lang;
 import com.ontheverg3.hill.world.HillDimensions;
 import com.ontheverg3.hill.world.HillIds;
 import com.ontheverg3.hill.zone.HillShape;
 import com.ontheverg3.hill.zone.HillSpec;
-import io.papermc.paper.command.brigadier.BasicCommand;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
+import io.papermc.paper.command.brigadier.Commands;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
-import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
-import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.ConsoleCommandSender;
-import org.bukkit.command.TabExecutor;
 import org.bukkit.entity.Player;
 
-public final class HillCommand implements TabExecutor, BasicCommand {
+public final class HillCommand {
     private static final String[] PERMISSIONS = {
         "hill.status",
         "hill.help",
@@ -51,6 +54,7 @@ public final class HillCommand implements TabExecutor, BasicCommand {
         "hill.autodivide",
         "hill.score",
         "hill.bossbar",
+        "hill.pad",
         "hill.admin"
     };
     private static final long MODE_CONFIRM_NANOS = 60_000_000_000L;
@@ -63,21 +67,69 @@ public final class HillCommand implements TabExecutor, BasicCommand {
         this.plugin = plugin;
     }
 
-    @Override
     public void execute(CommandSourceStack stack, String[] args) {
         String joined = args == null || args.length == 0 ? "" : String.join(" ", args);
         List<String> tokens = Quoted.split(joined);
-        onCommand(stack.getSender(), null, "hill", tokens.toArray(String[]::new));
+        dispatch(stack.getSender(), tokens.toArray(String[]::new));
     }
 
-    @Override
-    public Collection<String> suggest(CommandSourceStack stack, String[] args) {
-        List<String> suggestions =
-                onTabComplete(stack.getSender(), null, "hill", args == null ? new String[0] : args);
-        return suggestions == null ? List.of() : suggestions;
+    public LiteralCommandNode<CommandSourceStack> node() {
+        var root = Commands.literal("hill")
+                .requires(stack -> canUse(stack.getSender()))
+                .executes(ctx -> {
+                    execute(ctx.getSource(), new String[0]);
+                    return 1;
+                });
+        for (HillHelp.Topic topic : HillHelp.all()) {
+            root = root.then(leaf(topic));
+        }
+        return root.build();
     }
 
-    @Override
+    private LiteralArgumentBuilder<CommandSourceStack> leaf(HillHelp.Topic topic) {
+        return Commands.literal(topic.name())
+                .requires(stack -> stack.getSender().hasPermission(topic.permission()))
+                .executes(ctx -> {
+                    execute(ctx.getSource(), new String[] {topic.name()});
+                    return 1;
+                })
+                .then(Commands.argument("args", StringArgumentType.greedyString())
+                        .suggests((ctx, builder) ->
+                                suggestGreedy(ctx.getSource().getSender(), topic.name(), builder))
+                        .executes(ctx -> {
+                            String rest = StringArgumentType.getString(ctx, "args");
+                            List<String> tokens = Quoted.split(topic.name() + " " + rest);
+                            execute(ctx.getSource(), tokens.toArray(String[]::new));
+                            return 1;
+                        }));
+    }
+
+    private CompletableFuture<Suggestions> suggestGreedy(
+            CommandSender sender, String sub, SuggestionsBuilder builder) {
+        String remaining = builder.getRemaining();
+        List<String> args = new ArrayList<>();
+        args.add(sub);
+        if (remaining.isEmpty()) {
+            args.add("");
+        } else {
+            args.addAll(Quoted.split(remaining));
+            if (remaining.endsWith(" ")) {
+                args.add("");
+            }
+        }
+        List<String> options = onTabComplete(sender, args.toArray(String[]::new));
+        int lastSpace = remaining.lastIndexOf(' ');
+        String prefix = lastSpace >= 0 ? remaining.substring(0, lastSpace + 1) : "";
+        String current = lastSpace >= 0 ? remaining.substring(lastSpace + 1) : remaining;
+        String lower = current.toLowerCase(Locale.ROOT);
+        for (String option : options) {
+            if (option.toLowerCase(Locale.ROOT).startsWith(lower)) {
+                builder.suggest(prefix + option);
+            }
+        }
+        return builder.buildFuture();
+    }
+
     public boolean canUse(CommandSender sender) {
         for (String node : PERMISSIONS) {
             if (sender.hasPermission(node)) {
@@ -87,15 +139,14 @@ public final class HillCommand implements TabExecutor, BasicCommand {
         return false;
     }
 
-    @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+    public boolean dispatch(CommandSender sender, String[] args) {
         Lang lang = plugin.lang();
-        if (args.length == 0 || args[0].equalsIgnoreCase("help")) {
-            if (deny(sender, "hill.help")) {
-                return true;
-            }
-            lang.send(sender, "command-help");
-            lang.send(sender, "command-usage", Placeholder.parsed("usage", usage()));
+        if (args.length == 0) {
+            help(sender, null);
+            return true;
+        }
+        if (args[0].equalsIgnoreCase("help")) {
+            help(sender, args.length >= 2 ? args[1] : null);
             return true;
         }
         String sub = args[0].toLowerCase(Locale.ROOT);
@@ -108,17 +159,62 @@ public final class HillCommand implements TabExecutor, BasicCommand {
             case "unassign" -> unassign(sender, args);
             case "status" -> status(sender, args);
             case "swapteams" -> swapTeams(sender);
-            case "swapscore" -> swapScore(sender, args);
+            case "swapscore" -> swapScore(sender);
             case "pause" -> pause(sender, args);
             case "resume" -> resume(sender, args);
-            case "reset" -> reset(sender, args);
+            case "reset" -> reset(sender);
             case "perf" -> perf(sender, args);
             case "autodivide" -> autodivide(sender, args);
             case "score" -> score(sender, args);
             case "bossbar" -> bossBar(sender, args);
-            default -> lang.send(sender, "error-unknown-subcommand", Placeholder.parsed("usage", usage()));
+            case "pad" -> pad(sender, args);
+            default -> lang.send(sender, "error-unknown-subcommand", lang.unparsed("name", args[0]));
         }
         return true;
+    }
+
+    private void help(CommandSender sender, String topicName) {
+        if (deny(sender, "hill.help")) {
+            return;
+        }
+        Lang lang = plugin.lang();
+        if (topicName == null || topicName.isBlank()) {
+            lang.send(sender, "help-header");
+            lang.send(sender, "help-hint");
+            for (HillHelp.Topic topic : HillHelp.all()) {
+                if (!sender.hasPermission(topic.permission())) {
+                    continue;
+                }
+                lang.send(
+                        sender,
+                        "help-entry",
+                        lang.unparsed("name", topic.name()),
+                        lang.unparsed("summary", topic.summary()));
+            }
+            return;
+        }
+        var found = HillHelp.byName(topicName);
+        if (found.isEmpty()) {
+            lang.send(sender, "help-unknown", lang.unparsed("name", topicName));
+            return;
+        }
+        HillHelp.Topic topic = found.get();
+        lang.send(sender, "help-topic-name", lang.unparsed("name", topic.name()));
+        lang.send(sender, "help-topic-summary", lang.unparsed("summary", topic.summary()));
+        lang.send(sender, "help-topic-usage-title");
+        lang.send(sender, "help-topic-usage", lang.unparsed("usage", topic.usage()));
+        if (!topic.examples().isEmpty()) {
+            lang.send(sender, "help-topic-examples-title");
+            for (String example : topic.examples()) {
+                lang.send(sender, "help-topic-example", lang.unparsed("example", example));
+            }
+        }
+        if (!topic.notes().isBlank()) {
+            lang.send(sender, "help-topic-notes-title");
+            lang.send(sender, "help-topic-notes", lang.unparsed("notes", topic.notes()));
+        }
+        lang.send(sender, "help-topic-permission", lang.unparsed("node", topic.permission()));
+        lang.send(sender, "help-topic-back");
     }
 
     private boolean deny(CommandSender sender, String node) {
@@ -147,7 +243,7 @@ public final class HillCommand implements TabExecutor, BasicCommand {
         }
         Lang lang = plugin.lang();
         if (args.length < 2) {
-            lang.send(sender, "error-usage", Placeholder.parsed("usage", "/hill mode <ctf|koth>"));
+            lang.send(sender, "error-usage", lang.unparsed("usage", "/hill mode <ctf|koth>"));
             return;
         }
         var parsed = HillMode.parse(args[1]);
@@ -215,7 +311,7 @@ public final class HillCommand implements TabExecutor, BasicCommand {
         Lang lang = plugin.lang();
         String usage = "/hill new <x|~> <y|~> <z|~> <radius|rx ry rz> <square|circle|cube|sphere|cylinder> <id> [\"display name\"]";
         if (args.length < 7) {
-            lang.send(sender, "error-usage", Placeholder.parsed("usage", usage));
+            lang.send(sender, "error-usage", lang.unparsed("usage", usage));
             return;
         }
         Location origin = originOf(sender);
@@ -231,7 +327,7 @@ public final class HillCommand implements TabExecutor, BasicCommand {
             if ("relative".equals(ex.getMessage())) {
                 lang.send(sender, "error-relative-console");
             } else {
-                lang.send(sender, "error-usage", Placeholder.parsed("usage", usage));
+                lang.send(sender, "error-usage", lang.unparsed("usage", usage));
             }
             return;
         }
@@ -255,7 +351,7 @@ public final class HillCommand implements TabExecutor, BasicCommand {
             return;
         }
         if (args.length <= shapeIndex + 1) {
-            lang.send(sender, "error-usage", Placeholder.parsed("usage", usage));
+            lang.send(sender, "error-usage", lang.unparsed("usage", usage));
             return;
         }
         var shape = HillShape.parse(args[shapeIndex]);
@@ -329,7 +425,7 @@ public final class HillCommand implements TabExecutor, BasicCommand {
         }
         Lang lang = plugin.lang();
         if (args.length < 2) {
-            lang.send(sender, "error-usage", Placeholder.parsed("usage", "/hill remove <id|all>"));
+            lang.send(sender, "error-usage", lang.unparsed("usage", "/hill remove <id|all>"));
             return;
         }
         if (args[1].equalsIgnoreCase("all")) {
@@ -358,7 +454,7 @@ public final class HillCommand implements TabExecutor, BasicCommand {
         }
         Lang lang = plugin.lang();
         if (args.length < 3) {
-            lang.send(sender, "error-usage", Placeholder.parsed("usage", "/hill assign <player|selector> <blue|yellow>"));
+            lang.send(sender, "error-usage", lang.unparsed("usage", "/hill assign <player|selector> <blue|yellow>"));
             return;
         }
         var team = TeamId.parse(args[2], plugin.config().teams());
@@ -405,7 +501,7 @@ public final class HillCommand implements TabExecutor, BasicCommand {
         }
         Lang lang = plugin.lang();
         if (args.length < 2) {
-            lang.send(sender, "error-usage", Placeholder.parsed("usage", "/hill unassign <player|selector|all>"));
+            lang.send(sender, "error-usage", lang.unparsed("usage", "/hill unassign <player|selector|all>"));
             return;
         }
         if (args[1].equalsIgnoreCase("all")) {
@@ -444,7 +540,7 @@ public final class HillCommand implements TabExecutor, BasicCommand {
         }
         Lang lang = plugin.lang();
         if (args.length < 2) {
-            lang.send(sender, "error-usage", Placeholder.parsed("usage", "/hill status <hill id>"));
+            lang.send(sender, "error-usage", lang.unparsed("usage", "/hill status <hill id>"));
             return;
         }
         HillInstance hill = plugin.hills().byId(args[1]);
@@ -453,6 +549,7 @@ public final class HillCommand implements TabExecutor, BasicCommand {
             return;
         }
         var match = hill.match();
+        var board = plugin.hills().teams();
         lang.send(sender, "status-mode", lang.text("mode", plugin.hills().mode().display()));
         lang.send(
                 sender,
@@ -462,8 +559,8 @@ public final class HillCommand implements TabExecutor, BasicCommand {
                 lang.text("shape", hill.spec().shape().id()),
                 lang.text("world", hill.worldName()));
         lang.send(sender, match.paused() ? "status-paused" : "status-running");
-        lang.send(sender, "status-blue", lang.number("score", match.score(TeamId.BLUE)));
-        lang.send(sender, "status-yellow", lang.number("score", match.score(TeamId.YELLOW)));
+        lang.send(sender, "status-blue", lang.number("score", board.score(TeamId.BLUE)));
+        lang.send(sender, "status-yellow", lang.number("score", board.score(TeamId.YELLOW)));
         String pointKey = switch (match.pointState()) {
             case EMPTY -> "status-point-empty";
             case CONTESTED -> "status-point-contested";
@@ -506,23 +603,13 @@ public final class HillCommand implements TabExecutor, BasicCommand {
         plugin.lang().send(sender, "swapteams-ok");
     }
 
-    private void swapScore(CommandSender sender, String[] args) {
+    private void swapScore(CommandSender sender) {
         if (deny(sender, "hill.swapscore")) {
             return;
         }
-        Lang lang = plugin.lang();
-        if (args.length < 2) {
-            lang.send(sender, "error-usage", Placeholder.parsed("usage", "/hill swapscore <hill id>"));
-            return;
-        }
-        HillInstance hill = plugin.hills().byId(args[1]);
-        if (hill == null) {
-            lang.send(sender, "error-unknown-hill", lang.text("id", args[1]));
-            return;
-        }
-        hill.match().swapScores();
+        plugin.hills().teams().swapScores();
         plugin.persistMatch();
-        lang.send(sender, "swapscore-ok", lang.text("hill", hill.display()));
+        plugin.lang().send(sender, "swapscore-ok");
     }
 
     private void pause(CommandSender sender, String[] args) {
@@ -558,19 +645,11 @@ public final class HillCommand implements TabExecutor, BasicCommand {
         }
     }
 
-    private void reset(CommandSender sender, String[] args) {
+    private void reset(CommandSender sender) {
         if (deny(sender, "hill.reset")) {
             return;
         }
-        Lang lang = plugin.lang();
-        List<HillInstance> hills = resolveHills(sender, args, 1, "/hill reset <hill id|all>");
-        if (hills == null) {
-            return;
-        }
-        for (HillInstance hill : hills) {
-            hill.match().resetScores();
-            lang.send(sender, "reset-ok", lang.text("hill", hill.display()));
-        }
+        plugin.hills().resetScores();
         if (plugin.config().resetClearsTeams()) {
             plugin.hills().teams().clear();
             for (HillInstance hill : plugin.hills().all()) {
@@ -579,6 +658,7 @@ public final class HillCommand implements TabExecutor, BasicCommand {
             plugin.scoring().resyncOnline();
         }
         plugin.persistMatch();
+        plugin.lang().send(sender, "reset-ok");
     }
 
     private void perf(CommandSender sender, String[] args) {
@@ -635,7 +715,7 @@ public final class HillCommand implements TabExecutor, BasicCommand {
             } else if (token.equals("off") || token.equals("false") || token.equals("disable")) {
                 requested = false;
             } else {
-                lang.send(sender, "error-usage", Placeholder.parsed("usage", "/hill bossbar [on|off|toggle]"));
+                lang.send(sender, "error-usage", lang.unparsed("usage", "/hill bossbar [on|off|toggle]"));
                 return;
             }
         }
@@ -652,17 +732,94 @@ public final class HillCommand implements TabExecutor, BasicCommand {
         lang.send(sender, visible ? "bossbar-on" : "bossbar-off");
     }
 
+    private void pad(CommandSender sender, String[] args) {
+        if (deny(sender, "hill.pad")) {
+            return;
+        }
+        Lang lang = plugin.lang();
+        String usage = "/hill pad <blue|yellow|remove> [x1 y1 z1 x2 y2 z2]";
+        if (args.length < 2) {
+            lang.send(sender, "error-usage", lang.unparsed("usage", usage));
+            return;
+        }
+        if (args[1].equalsIgnoreCase("remove")) {
+            if (!(sender instanceof Player player)) {
+                lang.send(sender, "error-player-only");
+                return;
+            }
+            if (!plugin.hills().removePadAt(player.getLocation())) {
+                lang.send(sender, "pad-remove-none");
+                return;
+            }
+            plugin.persistHills();
+            lang.send(sender, "pad-remove-ok");
+            return;
+        }
+        var team = TeamId.parse(args[1], plugin.config() == null ? null : plugin.config().teams());
+        if (team.isEmpty()) {
+            lang.send(sender, "error-invalid-team");
+            return;
+        }
+        World world;
+        double x1;
+        double y1;
+        double z1;
+        double x2;
+        double y2;
+        double z2;
+        if (args.length >= 8) {
+            Location origin = originOf(sender);
+            boolean relativeOk = sender instanceof Player;
+            try {
+                x1 = parseCoord(args[2], origin == null ? 0 : origin.getX(), relativeOk);
+                y1 = parseCoord(args[3], origin == null ? 0 : origin.getY(), relativeOk);
+                z1 = parseCoord(args[4], origin == null ? 0 : origin.getZ(), relativeOk);
+                x2 = parseCoord(args[5], origin == null ? 0 : origin.getX(), relativeOk);
+                y2 = parseCoord(args[6], origin == null ? 0 : origin.getY(), relativeOk);
+                z2 = parseCoord(args[7], origin == null ? 0 : origin.getZ(), relativeOk);
+            } catch (IllegalArgumentException ex) {
+                if ("relative".equals(ex.getMessage())) {
+                    lang.send(sender, "error-relative-console");
+                } else {
+                    lang.send(sender, "error-usage", lang.unparsed("usage", usage));
+                }
+                return;
+            }
+            world = origin != null ? origin.getWorld() : (Bukkit.getWorlds().isEmpty() ? null : Bukkit.getWorlds().get(0));
+        } else if (sender instanceof Player player) {
+            Location loc = player.getLocation();
+            var block = loc.getBlock();
+            if (block.isEmpty()) {
+                block = loc.clone().subtract(0, 0.2, 0).getBlock();
+            }
+            world = player.getWorld();
+            x1 = x2 = block.getX();
+            y1 = y2 = block.getY();
+            z1 = z2 = block.getZ();
+        } else {
+            lang.send(sender, "error-usage", lang.unparsed("usage", usage));
+            return;
+        }
+        if (world == null) {
+            lang.send(sender, "error-point-unusable");
+            return;
+        }
+        plugin.hills().addPad(TeamPad.fromInclusiveBlocks(team.get(), world, x1, y1, z1, x2, y2, z2));
+        plugin.persistHills();
+        lang.send(sender, "pad-ok", lang.component("team", lang.hud(team.get().langKey())));
+    }
+
     private void autodivide(CommandSender sender, String[] args) {
         if (deny(sender, "hill.autodivide")) {
             return;
         }
         Lang lang = plugin.lang();
         if (args.length < 3) {
-            lang.send(sender, "error-usage", Placeholder.parsed("usage", "/hill autodivide <blue%> <yellow%>"));
+            lang.send(sender, "error-usage", lang.unparsed("usage", "/hill autodivide <blue%> <yellow%>"));
             return;
         }
         if (!PercentSplit.looksLike(args[1]) || !PercentSplit.looksLike(args[2])) {
-            lang.send(sender, "error-usage", Placeholder.parsed("usage", "/hill autodivide <blue%> <yellow%>"));
+            lang.send(sender, "error-usage", lang.unparsed("usage", "/hill autodivide <blue%> <yellow%>"));
             return;
         }
         var ratio = PercentSplit.parse(args[1], args[2]);
@@ -757,9 +914,9 @@ public final class HillCommand implements TabExecutor, BasicCommand {
             return;
         }
         Lang lang = plugin.lang();
-        String usage = "/hill score <add|remove> <amount> <blue|yellow> [hill id|all]";
+        String usage = "/hill score <add|remove> <amount> <blue|yellow>";
         if (args.length < 4) {
-            lang.send(sender, "error-usage", Placeholder.parsed("usage", usage));
+            lang.send(sender, "error-usage", lang.unparsed("usage", usage));
             return;
         }
         String action = args[1].toLowerCase(Locale.ROOT);
@@ -783,39 +940,22 @@ public final class HillCommand implements TabExecutor, BasicCommand {
             lang.send(sender, "error-invalid-team");
             return;
         }
-        List<HillInstance> hills;
-        if (args.length >= 5) {
-            hills = resolveHills(sender, args, 4, usage);
-        } else {
-            HillInstance inferred = inferHill(sender);
-            hills = inferred == null ? null : List.of(inferred);
-            if (hills == null) {
-                lang.send(sender, "error-score-hill");
-                return;
-            }
-        }
-        if (hills == null) {
-            return;
-        }
         int delta = action.equals("add") ? amount : -amount;
-        for (HillInstance hill : hills) {
-            hill.match().addScore(team.get(), delta);
-            lang.send(
-                    sender,
-                    "score-ok",
-                    lang.text("action", action.equals("add") ? "Added" : "Removed"),
-                    lang.number("amount", amount),
-                    lang.component("team", lang.hud(team.get().langKey())),
-                    lang.text("hill", hill.display()),
-                    lang.number("score", hill.match().score(team.get())));
-        }
+        plugin.hills().teams().addScore(team.get(), delta);
         plugin.persistMatch();
+        lang.send(
+                sender,
+                "score-ok",
+                lang.text("action", action.equals("add") ? "Added" : "Removed"),
+                lang.number("amount", amount),
+                lang.component("team", lang.hud(team.get().langKey())),
+                lang.number("score", plugin.hills().teams().score(team.get())));
     }
 
     private List<HillInstance> resolveHills(CommandSender sender, String[] args, int index, String usage) {
         Lang lang = plugin.lang();
         if (args.length <= index) {
-            lang.send(sender, "error-usage", Placeholder.parsed("usage", usage));
+            lang.send(sender, "error-usage", lang.unparsed("usage", usage));
             return null;
         }
         if (args[index].equalsIgnoreCase("all")) {
@@ -832,20 +972,6 @@ public final class HillCommand implements TabExecutor, BasicCommand {
             return null;
         }
         return List.of(hill);
-    }
-
-    private HillInstance inferHill(CommandSender sender) {
-        if (sender instanceof Player player) {
-            HillInstance inside = plugin.hills().containing(player.getLocation());
-            if (inside != null) {
-                return inside;
-            }
-        }
-        Collection<HillInstance> all = plugin.hills().all();
-        if (all.size() == 1) {
-            return all.iterator().next();
-        }
-        return null;
     }
 
     private World worldOf(CommandSender sender) {
@@ -917,10 +1043,9 @@ public final class HillCommand implements TabExecutor, BasicCommand {
         return String.format(Locale.ROOT, "%.1f%%", value);
     }
 
-    @Override
-    public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
+    private List<String> onTabComplete(CommandSender sender, String[] args) {
         if (args.length == 0) {
-            return List.of();
+            return subsFor(sender);
         }
         String current = args[args.length - 1];
         if (args.length == 1) {
@@ -935,6 +1060,7 @@ public final class HillCommand implements TabExecutor, BasicCommand {
         List<String> idsAll = new ArrayList<>(ids);
         idsAll.add("all");
         return switch (sub) {
+            case "help" -> args.length == 2 ? helpTopics(sender) : List.of();
             case "mode" -> args.length == 2 ? List.of("ctf", "koth") : List.of();
             case "new" -> {
                 if (args.length <= 4) {
@@ -948,8 +1074,8 @@ public final class HillCommand implements TabExecutor, BasicCommand {
                 }
                 yield List.of();
             }
-            case "remove", "status", "swapscore" -> args.length == 2 ? ("remove".equals(sub) ? idsAll : ids) : List.of();
-            case "pause", "resume", "reset", "perf" -> args.length == 2 ? idsAll : List.of();
+            case "remove", "status" -> args.length == 2 ? ("remove".equals(sub) ? idsAll : ids) : List.of();
+            case "pause", "resume", "perf" -> args.length == 2 ? idsAll : List.of();
             case "assign" -> {
                 if (args.length == 2) {
                     List<String> names = new ArrayList<>();
@@ -972,6 +1098,17 @@ public final class HillCommand implements TabExecutor, BasicCommand {
             }
             case "autodivide" -> args.length == 2 || args.length == 3 ? List.of("50%", "70%", "30%", "60%", "40%") : List.of();
             case "bossbar" -> args.length == 2 ? List.of("on", "off", "toggle") : List.of();
+            case "pad" -> {
+                if (args.length == 2) {
+                    List<String> tokens = new ArrayList<>(teamTokens());
+                    tokens.add("remove");
+                    yield tokens;
+                }
+                if (args.length >= 3 && args.length <= 8) {
+                    yield List.of("~");
+                }
+                yield List.of();
+            }
             case "score" -> {
                 if (args.length == 2) {
                     yield List.of("add", "remove");
@@ -982,9 +1119,6 @@ public final class HillCommand implements TabExecutor, BasicCommand {
                 if (args.length == 4) {
                     yield teamTokens();
                 }
-                if (args.length == 5) {
-                    yield idsAll;
-                }
                 yield List.of();
             }
             default -> List.of();
@@ -993,24 +1127,14 @@ public final class HillCommand implements TabExecutor, BasicCommand {
 
     private List<String> subsFor(CommandSender sender) {
         List<String> subs = new ArrayList<>();
-        addIfPermitted(sender, subs, "help", "hill.help");
-        addIfPermitted(sender, subs, "reload", "hill.reload");
-        addIfPermitted(sender, subs, "mode", "hill.mode");
-        addIfPermitted(sender, subs, "new", "hill.new");
-        addIfPermitted(sender, subs, "remove", "hill.remove");
-        addIfPermitted(sender, subs, "assign", "hill.assign");
-        addIfPermitted(sender, subs, "unassign", "hill.unassign");
-        addIfPermitted(sender, subs, "status", "hill.status");
-        addIfPermitted(sender, subs, "swapteams", "hill.swapteams");
-        addIfPermitted(sender, subs, "swapscore", "hill.swapscore");
-        addIfPermitted(sender, subs, "pause", "hill.pause");
-        addIfPermitted(sender, subs, "resume", "hill.resume");
-        addIfPermitted(sender, subs, "reset", "hill.reset");
-        addIfPermitted(sender, subs, "perf", "hill.perf");
-        addIfPermitted(sender, subs, "autodivide", "hill.autodivide");
-        addIfPermitted(sender, subs, "score", "hill.score");
-        addIfPermitted(sender, subs, "bossbar", "hill.bossbar");
+        for (HillHelp.Topic topic : HillHelp.all()) {
+            addIfPermitted(sender, subs, topic.name(), topic.permission());
+        }
         return subs;
+    }
+
+    private List<String> helpTopics(CommandSender sender) {
+        return subsFor(sender);
     }
 
     private static void addIfPermitted(CommandSender sender, List<String> subs, String name, String node) {
@@ -1041,10 +1165,6 @@ public final class HillCommand implements TabExecutor, BasicCommand {
     private List<String> filter(List<String> options, String token) {
         String lower = token.toLowerCase(Locale.ROOT);
         return options.stream().filter(o -> o.toLowerCase(Locale.ROOT).startsWith(lower)).toList();
-    }
-
-    private static String usage() {
-        return "/hill <help|reload|mode|new|remove|assign|unassign|status|swapteams|swapscore|pause|resume|reset|perf|autodivide|score|bossbar> ...";
     }
 
     private record PendingMode(UUID actor, HillMode mode, String token, long expiresAt) {}

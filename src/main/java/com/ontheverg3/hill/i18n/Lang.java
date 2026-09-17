@@ -81,7 +81,8 @@ public final class Lang {
         if (yaml == null) {
             return key;
         }
-        return yaml.getString(key, key);
+        String value = yaml.getString(key);
+        return value == null || value.isBlank() ? key : value;
     }
 
     private TagResolver merge(TagResolver[] extra) {

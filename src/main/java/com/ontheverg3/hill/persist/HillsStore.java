@@ -6,6 +6,8 @@ import com.google.gson.JsonParseException;
 import com.ontheverg3.hill.game.HillInstance;
 import com.ontheverg3.hill.game.HillMode;
 import com.ontheverg3.hill.game.HillRegistry;
+import com.ontheverg3.hill.game.TeamId;
+import com.ontheverg3.hill.game.TeamPad;
 import com.ontheverg3.hill.world.HillIds;
 import com.ontheverg3.hill.zone.HillShape;
 import com.ontheverg3.hill.zone.HillSpec;
@@ -45,6 +47,16 @@ public final class HillsStore {
                 specs.add(spec);
             }
             registry.replaceAll(specs, HillMode.parse(model.mode).orElse(HillMode.KOTH));
+            List<TeamPad> pads = new ArrayList<>();
+            if (model.pads != null) {
+                for (PadModel pad : model.pads) {
+                    TeamPad parsed = toPad(pad);
+                    if (parsed != null) {
+                        pads.add(parsed);
+                    }
+                }
+            }
+            registry.replacePads(pads);
         }
     }
 
@@ -55,6 +67,9 @@ public final class HillsStore {
             model.mode = registry.mode().id();
             for (HillInstance instance : registry.all()) {
                 model.hills.add(fromSpec(instance.spec()));
+            }
+            for (TeamPad pad : registry.pads()) {
+                model.pads.add(fromPad(pad));
             }
             Path target = file.toPath();
             Path temp = target.resolveSibling("hills.json.tmp");
@@ -115,6 +130,38 @@ public final class HillsStore {
         return new HillSpec(id, display, world, save, dimension, shape, model.x, model.y, model.z, model.rx, model.ry, model.rz);
     }
 
+    private TeamPad toPad(PadModel model) {
+        if (model == null) {
+            return null;
+        }
+        TeamId team = TeamId.parse(model.team).orElse(null);
+        if (team == null) {
+            plugin.getLogger().warning("Ignored a team pad in hills.json with team " + model.team);
+            return null;
+        }
+        String world = model.world == null || model.world.isBlank() ? "world" : model.world;
+        String save = model.save == null || model.save.isBlank() ? HillIds.saveName(world) : model.save;
+        String dimension =
+                model.dimension == null || model.dimension.isBlank() ? HillIds.OVERWORLD : model.dimension;
+        return new TeamPad(
+                team, world, save, dimension, model.minX, model.minY, model.minZ, model.maxX, model.maxY, model.maxZ);
+    }
+
+    private static PadModel fromPad(TeamPad pad) {
+        PadModel model = new PadModel();
+        model.team = pad.team() == TeamId.BLUE ? "blue" : "yellow";
+        model.world = pad.world();
+        model.save = pad.save();
+        model.dimension = pad.dimension();
+        model.minX = pad.minX();
+        model.minY = pad.minY();
+        model.minZ = pad.minZ();
+        model.maxX = pad.maxX();
+        model.maxY = pad.maxY();
+        model.maxZ = pad.maxZ();
+        return model;
+    }
+
     private static HillModel fromSpec(HillSpec spec) {
         HillModel model = new HillModel();
         model.id = spec.id();
@@ -135,6 +182,20 @@ public final class HillsStore {
     static final class FileModel {
         String mode = HillMode.KOTH.id();
         List<HillModel> hills = new ArrayList<>();
+        List<PadModel> pads = new ArrayList<>();
+    }
+
+    static final class PadModel {
+        String team;
+        String world;
+        String save;
+        String dimension;
+        double minX;
+        double minY;
+        double minZ;
+        double maxX;
+        double maxY;
+        double maxZ;
     }
 
     static final class HillModel {

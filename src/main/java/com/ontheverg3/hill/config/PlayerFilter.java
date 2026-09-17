@@ -9,36 +9,31 @@ import org.bukkit.entity.Player;
 
 public final class PlayerFilter {
     private final boolean excludeDead;
-    private final boolean excludeSpectator;
-    private final boolean excludeCreative;
     private final List<GameMode> excludeGamemodes;
 
-    public PlayerFilter(
-            boolean excludeDead,
-            boolean excludeSpectator,
-            boolean excludeCreative,
-            List<GameMode> excludeGamemodes) {
+    public PlayerFilter(boolean excludeDead, List<GameMode> excludeGamemodes) {
         this.excludeDead = excludeDead;
-        this.excludeSpectator = excludeSpectator;
-        this.excludeCreative = excludeCreative;
         this.excludeGamemodes = List.copyOf(excludeGamemodes == null ? List.of() : excludeGamemodes);
     }
 
     public static PlayerFilter load(
-            FileConfiguration yaml, String path, boolean defaultDead, boolean defaultSpectator, boolean defaultCreative)
+            FileConfiguration yaml, String path, boolean defaultDead, List<GameMode> defaultGamemodes)
             throws ConfigException {
         boolean dead = yaml.getBoolean(path + ".exclude-dead", defaultDead);
-        boolean spectator = yaml.getBoolean(path + ".exclude-spectator", defaultSpectator);
-        boolean creative = yaml.getBoolean(path + ".exclude-creative", defaultCreative);
-        List<GameMode> modes = new ArrayList<>();
-        for (String raw : yaml.getStringList(path + ".exclude-gamemodes")) {
-            try {
-                modes.add(GameMode.valueOf(raw.trim().toUpperCase(Locale.ROOT)));
-            } catch (IllegalArgumentException ex) {
-                throw new ConfigException(path + ".exclude-gamemodes: unknown gamemode " + raw);
+        List<GameMode> modes;
+        if (yaml.contains(path + ".exclude-gamemodes")) {
+            modes = new ArrayList<>();
+            for (String raw : yaml.getStringList(path + ".exclude-gamemodes")) {
+                try {
+                    modes.add(GameMode.valueOf(raw.trim().toUpperCase(Locale.ROOT)));
+                } catch (IllegalArgumentException ex) {
+                    throw new ConfigException(path + ".exclude-gamemodes: unknown gamemode " + raw);
+                }
             }
+        } else {
+            modes = defaultGamemodes == null ? List.of() : defaultGamemodes;
         }
-        return new PlayerFilter(dead, spectator, creative, modes);
+        return new PlayerFilter(dead, modes);
     }
 
     public boolean excluded(Player player) {
@@ -48,26 +43,11 @@ public final class PlayerFilter {
         if (excludeDead && player.isDead()) {
             return true;
         }
-        GameMode mode = player.getGameMode();
-        if (excludeSpectator && mode == GameMode.SPECTATOR) {
-            return true;
-        }
-        if (excludeCreative && mode == GameMode.CREATIVE) {
-            return true;
-        }
-        return excludeGamemodes.contains(mode);
+        return excludeGamemodes.contains(player.getGameMode());
     }
 
     public boolean excludeDead() {
         return excludeDead;
-    }
-
-    public boolean excludeSpectator() {
-        return excludeSpectator;
-    }
-
-    public boolean excludeCreative() {
-        return excludeCreative;
     }
 
     public List<GameMode> excludeGamemodes() {

@@ -12,10 +12,10 @@ softdepend:
 
 permissions:
   hill.status:
-    description: View a hill's scores and point state
+    description: View a hill's control and the global scores
     default: true
   hill.help:
-    description: View /hill help
+    description: View the command list or /hill help <command>
     default: op
   hill.reload:
     description: Reload config, language, and hills.json
@@ -39,7 +39,7 @@ permissions:
     description: Swap Blue and Yellow assignments
     default: op
   hill.swapscore:
-    description: Swap Blue and Yellow scores on a hill
+    description: Swap Blue and Yellow scores
     default: op
   hill.pause:
     description: Pause scoring on a hill
@@ -48,7 +48,7 @@ permissions:
     description: Resume scoring on a hill
     default: op
   hill.reset:
-    description: Reset scores on a hill
+    description: Reset the global scores
     default: op
   hill.perf:
     description: View occupancy sample timing
@@ -57,11 +57,14 @@ permissions:
     description: Shuffle-split online players by percent
     default: op
   hill.score:
-    description: Add or remove team score on a hill
+    description: Add or remove global team score
     default: op
   hill.bossbar:
     description: Toggle the score boss bar for yourself
     default: true
+  hill.pad:
+    description: Create or remove team assign pads
+    default: op
   hill.admin:
     description: All Hill commands
     default: op
@@ -83,3 +86,4 @@ permissions:
       hill.autodivide: true
       hill.score: true
       hill.bossbar: true
+      hill.pad: true

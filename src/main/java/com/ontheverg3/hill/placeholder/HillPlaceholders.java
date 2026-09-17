@@ -3,6 +3,7 @@ package com.ontheverg3.hill.placeholder;
 import com.ontheverg3.hill.HillPlugin;
 import com.ontheverg3.hill.config.HillConfig;
 import com.ontheverg3.hill.game.HillRegistry;
+import com.ontheverg3.hill.game.TeamId;
 import me.clip.placeholderapi.expansion.PlaceholderExpansion;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
@@ -70,7 +71,9 @@ public final class HillPlaceholders {
                             config.blueDisplay(),
                             config.yellowDisplay(),
                             config.teams().team1().hex(),
-                            config.teams().team2().hex()));
+                            config.teams().team2().hex(),
+                            hills.teams().score(TeamId.BLUE),
+                            hills.teams().score(TeamId.YELLOW)));
         }
 
         @Override

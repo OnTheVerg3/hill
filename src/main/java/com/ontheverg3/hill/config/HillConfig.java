@@ -16,6 +16,7 @@ public final class HillConfig {
     private final boolean actionBar;
     private final boolean bossBar;
     private final int bossBarWidth;
+    private final ScoreHud scoresHud;
     private final int displayUpdateTicks;
     private final boolean skipWithoutAddress;
     private final String ignoreNamePrefix;
@@ -36,6 +37,7 @@ public final class HillConfig {
             boolean actionBar,
             boolean bossBar,
             int bossBarWidth,
+            ScoreHud scoresHud,
             int displayUpdateTicks,
             boolean skipWithoutAddress,
             String ignoreNamePrefix,
@@ -54,6 +56,7 @@ public final class HillConfig {
         this.actionBar = actionBar;
         this.bossBar = bossBar;
         this.bossBarWidth = bossBarWidth;
+        this.scoresHud = scoresHud == null ? ScoreHud.IN_ZONE : scoresHud;
         this.displayUpdateTicks = displayUpdateTicks;
         this.skipWithoutAddress = skipWithoutAddress;
         this.ignoreNamePrefix = ignoreNamePrefix;
@@ -69,8 +72,10 @@ public final class HillConfig {
         int interval = requirePositiveInt(yaml, "scoring.interval-seconds");
         int points = requireNonNegativeInt(yaml, "scoring.points");
         int winScore = requireNonNegativeInt(yaml, "scoring.win-score");
-        PlayerFilter scoringFilter = PlayerFilter.load(yaml, "eligibility", true, true, false);
-        PlayerFilter assignFilter = PlayerFilter.load(yaml, "assign", true, true, true);
+        PlayerFilter scoringFilter =
+                PlayerFilter.load(yaml, "eligibility", true, List.of(GameMode.SPECTATOR));
+        PlayerFilter assignFilter =
+                PlayerFilter.load(yaml, "assign", true, List.of(GameMode.SPECTATOR, GameMode.CREATIVE));
         TeamLooks teams = loadTeams(yaml);
         boolean actionBar = yaml.getBoolean("display.action-bar", true);
         boolean bossBar = yaml.getBoolean("display.boss-bar", true);
@@ -84,6 +89,7 @@ public final class HillConfig {
         if ((bossBarWidth & 1) != 0) {
             bossBarWidth++;
         }
+        ScoreHud scoresHud = ScoreHud.parse(yaml.getString("display.scores", "in-zone"));
         int updateTicks = requirePositiveInt(yaml, "display.update-ticks");
         boolean skipWithoutAddress = yaml.getBoolean("display.skip-without-address", true);
         String ignoreNamePrefix = yaml.getString("display.ignore-name-prefix", "");
@@ -117,6 +123,7 @@ public final class HillConfig {
                 actionBar,
                 bossBar,
                 bossBarWidth,
+                scoresHud,
                 updateTicks,
                 skipWithoutAddress,
                 ignoreNamePrefix,
@@ -133,12 +140,13 @@ public final class HillConfig {
                 5,
                 1,
                 0,
-                new PlayerFilter(true, true, false, List.of(GameMode.SPECTATOR)),
-                new PlayerFilter(true, true, true, List.of(GameMode.SPECTATOR, GameMode.CREATIVE)),
+                new PlayerFilter(true, List.of(GameMode.SPECTATOR)),
+                new PlayerFilter(true, List.of(GameMode.SPECTATOR, GameMode.CREATIVE)),
                 TeamLooks.defaults(),
                 true,
                 true,
                 24,
+                ScoreHud.IN_ZONE,
                 20,
                 true,
                 "",
@@ -181,10 +189,6 @@ public final class HillConfig {
         return scoringFilter.excludeDead();
     }
 
-    public boolean excludeSpectator() {
-        return scoringFilter.excludeSpectator();
-    }
-
     public List<GameMode> excludeGamemodes() {
         return scoringFilter.excludeGamemodes();
     }
@@ -215,6 +219,10 @@ public final class HillConfig {
 
     public int bossBarWidth() {
         return bossBarWidth;
+    }
+
+    public ScoreHud scoresHud() {
+        return scoresHud;
     }
 
     public int displayUpdateTicks() {

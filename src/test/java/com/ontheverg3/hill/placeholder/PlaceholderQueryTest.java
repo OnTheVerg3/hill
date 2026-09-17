@@ -18,18 +18,18 @@ class PlaceholderQueryTest {
     @Test
     void resolvesGlobalAndPerHillTokens() {
         HillInstance hill = instance("castle_hill", "Castle");
-        hill.match().setScore(TeamId.BLUE, 12);
-        hill.match().setScore(TeamId.YELLOW, 4);
         hill.match().setPaused(true);
         hill.match().setPointState(PointState.CONTROLLED_BLUE);
         UUID viewer = UUID.fromString("00000000-0000-0000-0000-000000000010");
-        PlaceholderQuery.Context context = context(hill, viewer, TeamId.YELLOW);
+        PlaceholderQuery.Context context = context(hill, viewer, TeamId.YELLOW, 12, 4);
         assertEquals("koth", PlaceholderQuery.resolve("mode", viewer, context));
         assertEquals("1", PlaceholderQuery.resolve("count", viewer, context));
         assertEquals("castle_hill", PlaceholderQuery.resolve("ids", viewer, context));
         assertEquals("yellow", PlaceholderQuery.resolve("team", viewer, context));
         assertEquals("Blue", PlaceholderQuery.resolve("team_blue", viewer, context));
         assertEquals("#5555ff", PlaceholderQuery.resolve("team_color_blue", viewer, context));
+        assertEquals("12", PlaceholderQuery.resolve("score_blue", viewer, context));
+        assertEquals("4", PlaceholderQuery.resolve("score_yellow", viewer, context));
         assertEquals("12", PlaceholderQuery.resolve("score_blue_castle_hill", viewer, context));
         assertEquals("4", PlaceholderQuery.resolve("score_yellow_castle_hill", viewer, context));
         assertEquals("blue", PlaceholderQuery.resolve("state_castle_hill", viewer, context));
@@ -43,11 +43,10 @@ class PlaceholderQueryTest {
     @Test
     void hereTokensUseOccupyingHillAndIgnoreUnassigned() {
         HillInstance hill = instance("mid", "Mid");
-        hill.match().setScore(TeamId.BLUE, 3);
         hill.match().setPointState(PointState.EMPTY);
         UUID onHill = UUID.fromString("00000000-0000-0000-0000-000000000011");
         UUID unassigned = UUID.fromString("00000000-0000-0000-0000-000000000012");
-        PlaceholderQuery.Context on = context(hill, onHill, TeamId.BLUE);
+        PlaceholderQuery.Context on = context(hill, onHill, TeamId.BLUE, 3, 0);
         PlaceholderQuery.Context off =
                 new PlaceholderQuery.Context(
                         HillMode.CTF,
@@ -58,7 +57,9 @@ class PlaceholderQueryTest {
                         "Blue",
                         "Yellow",
                         "#5555ff",
-                        "#ffff55");
+                        "#ffff55",
+                        3,
+                        0);
         assertEquals("mid", PlaceholderQuery.resolve("here_id", onHill, on));
         assertEquals("3", PlaceholderQuery.resolve("here_score_blue", onHill, on));
         assertEquals("", PlaceholderQuery.resolve("here_id", unassigned, off));
@@ -71,7 +72,8 @@ class PlaceholderQueryTest {
                 new HillSpec(id, display, "world", "world", "overworld", HillShape.CIRCLE, 0, 64, 0, 8, 16, 8));
     }
 
-    private static PlaceholderQuery.Context context(HillInstance hill, UUID viewer, TeamId team) {
+    private static PlaceholderQuery.Context context(
+            HillInstance hill, UUID viewer, TeamId team, int blueScore, int yellowScore) {
         Map<UUID, TeamId> teams = Map.of(viewer, team);
         return new PlaceholderQuery.Context(
                 HillMode.KOTH,
@@ -82,6 +84,8 @@ class PlaceholderQueryTest {
                 "Blue",
                 "Yellow",
                 "#5555ff",
-                "#ffff55");
+                "#ffff55",
+                blueScore,
+                yellowScore);
     }
 }

@@ -4,7 +4,6 @@ import com.ontheverg3.hill.command.HillCommand;
 import com.ontheverg3.hill.config.ConfigException;
 import com.ontheverg3.hill.config.HillConfig;
 import com.ontheverg3.hill.game.DisplayService;
-import com.ontheverg3.hill.game.HillInstance;
 import com.ontheverg3.hill.game.HillRegistry;
 import com.ontheverg3.hill.game.OutlineService;
 import com.ontheverg3.hill.game.ScoringService;
@@ -36,7 +35,7 @@ public final class HillPlugin extends JavaPlugin {
                 .registerEventHandler(
                         LifecycleEvents.COMMANDS,
                         event -> event.registrar()
-                                .register("hill", "Hill commands", List.of("koth", "hillkoth"), hillCommand));
+                                .register(hillCommand.node(), "Hill commands", List.of("koth")));
     }
 
     @Override
@@ -115,9 +114,7 @@ public final class HillPlugin extends JavaPlugin {
         }
         hillsStore.load(hills);
         if (config.reloadResets()) {
-            for (HillInstance hill : hills.all()) {
-                hill.match().resetScores();
-            }
+            hills.resetScores();
             dataStore.save(hills);
         }
         scoring.stop();

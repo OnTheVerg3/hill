@@ -2,6 +2,7 @@ package com.ontheverg3.hill.game;
 
 import com.ontheverg3.hill.world.HillDimensions;
 import com.ontheverg3.hill.zone.HillSpec;
+import com.ontheverg3.hill.config.HillConfig;
 import com.ontheverg3.hill.zone.ShapedZone;
 import com.ontheverg3.hill.zone.UnusableZone;
 import java.util.ArrayList;
@@ -10,6 +11,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
@@ -19,6 +21,7 @@ public final class HillRegistry {
     private final ConcurrentHashMap<String, HillInstance> instances = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, String> playerSaves = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, String> playerDimensions = new ConcurrentHashMap<>();
+    private final CopyOnWriteArrayList<TeamPad> pads = new CopyOnWriteArrayList<>();
     private final TeamBoard teams = new TeamBoard();
     private volatile HillMode mode = HillMode.KOTH;
 
@@ -163,18 +166,15 @@ public final class HillRegistry {
     public void clearHills() {
         for (HillInstance instance : instances.values()) {
             instance.tracker().clear();
-            instance.match().resetScores();
             instance.match().setPaused(false);
             instance.match().setPointState(PointState.EMPTY);
         }
         instances.clear();
+        teams.resetScores();
     }
 
     public void resetScores() {
-        for (HillInstance instance : instances.values()) {
-            instance.match().resetScores();
-            instance.match().setPaused(false);
-        }
+        teams.resetScores();
     }
 
     public void replaceAll(List<HillSpec> specs, HillMode nextMode) {
@@ -263,6 +263,59 @@ public final class HillRegistry {
         }
         String known = playerSaves.get(player.getUniqueId());
         return save.equals(known);
+    }
+
+    public List<TeamPad> pads() {
+        return List.copyOf(pads);
+    }
+
+    public void replacePads(List<TeamPad> next) {
+        pads.clear();
+        if (next != null) {
+            pads.addAll(next);
+        }
+    }
+
+    public void addPad(TeamPad pad) {
+        if (pad != null) {
+            pads.add(pad);
+        }
+    }
+
+    public TeamPad padAt(Location location) {
+        if (location == null) {
+            return null;
+        }
+        for (TeamPad pad : pads) {
+            if (pad.contains(location)) {
+                return pad;
+            }
+        }
+        return null;
+    }
+
+    public boolean removePadAt(Location location) {
+        TeamPad pad = padAt(location);
+        if (pad == null) {
+            return false;
+        }
+        return pads.remove(pad);
+    }
+
+    public boolean applyTeamPad(Player player, HillConfig config) {
+        if (player == null || config == null || config.assignExcluded(player)) {
+            return false;
+        }
+        TeamPad pad = padAt(player.getLocation());
+        if (pad == null) {
+            return false;
+        }
+        UUID id = player.getUniqueId();
+        if (teams.teamOf(id) == pad.team()) {
+            return false;
+        }
+        teams.assign(id, pad.team());
+        return true;
     }
 
     private void bindSpec(HillInstance instance) {

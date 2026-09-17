@@ -1,6 +1,7 @@
 package com.ontheverg3.hill.listener;
 
 import com.ontheverg3.hill.HillPlugin;
+import com.ontheverg3.hill.game.HillInstance;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -46,7 +47,13 @@ public final class PresenceListener implements Listener {
                 && from.getWorld() == to.getWorld()) {
             return;
         }
-        plugin.scoring().syncHere(event.getPlayer());
+        Player player = event.getPlayer();
+        HillInstance fromHill = plugin.hills().containing(from);
+        boolean assigned = plugin.scoring().syncHere(player);
+        HillInstance toHill = plugin.hills().containing(to);
+        if (assigned || fromHill != toHill) {
+            plugin.display().refresh(player);
+        }
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
@@ -57,6 +64,7 @@ public final class PresenceListener implements Listener {
     @EventHandler(priority = EventPriority.MONITOR)
     public void onDeath(PlayerDeathEvent event) {
         plugin.scoring().syncHere(event.getEntity());
+        plugin.display().refresh(event.getEntity());
     }
 
     @EventHandler(priority = EventPriority.MONITOR)

@@ -46,30 +46,49 @@ public final class DataStore {
         YamlConfiguration yaml = YamlConfiguration.loadConfiguration(file);
         Map<UUID, TeamId> teams = new HashMap<>();
         readTeams(yaml.getConfigurationSection("teams"), teams);
+        int[] scores = new int[2];
+        boolean haveGlobalScores = yaml.contains("scores");
+        if (haveGlobalScores) {
+            scores[0] = yaml.getInt("scores.blue", 0);
+            scores[1] = yaml.getInt("scores.yellow", 0);
+        }
         ConfigurationSection hills = yaml.getConfigurationSection("hills");
         if (hills != null) {
             for (String hillId : hills.getKeys(false)) {
                 HillInstance instance = registry.byId(hillId);
-                if (instance == null) {
-                    continue;
+                ConfigurationSection section = hills.getConfigurationSection(hillId);
+                if (instance != null) {
+                    applyPause(instance.match(), section);
                 }
-                applyScores(instance.match(), hills.getConfigurationSection(hillId));
+                if (!haveGlobalScores) {
+                    int[] pair = scoresFrom(section);
+                    scores[0] += pair[0];
+                    scores[1] += pair[1];
+                }
             }
-        } else {
-            migrateLegacy(yaml, registry, teams);
+        } else if (!haveGlobalScores) {
+            int[] migrated = migrateLegacy(yaml, registry, teams);
+            scores[0] = migrated[0];
+            scores[1] = migrated[1];
         }
         registry.teams().replace(teams);
+        registry.teams().setScore(TeamId.BLUE, scores[0]);
+        registry.teams().setScore(TeamId.YELLOW, scores[1]);
     }
 
-    private void migrateLegacy(YamlConfiguration yaml, HillRegistry registry, Map<UUID, TeamId> teams) {
+    private int[] migrateLegacy(YamlConfiguration yaml, HillRegistry registry, Map<UUID, TeamId> teams) {
         ConfigurationSection saves = yaml.getConfigurationSection("saves");
         if (saves == null) {
             readTeams(yaml.getConfigurationSection("teams"), teams);
             if (registry.all().size() == 1) {
-                applyScores(registry.all().iterator().next().match(), yaml);
+                HillInstance only = registry.all().iterator().next();
+                applyPause(only.match(), yaml);
+                return scoresFrom(yaml);
             }
-            return;
+            return new int[] {0, 0};
         }
+        int blue = 0;
+        int yellow = 0;
         for (String save : saves.getKeys(false)) {
             ConfigurationSection hills = saves.getConfigurationSection(save + ".hills");
             if (hills == null) {
@@ -80,10 +99,14 @@ public final class DataStore {
                 readTeams(section == null ? null : section.getConfigurationSection("teams"), teams);
                 HillInstance instance = registry.byId(hillId);
                 if (instance != null) {
-                    applyScores(instance.match(), section);
+                    applyPause(instance.match(), section);
                 }
+                int[] pair = scoresFrom(section);
+                blue += pair[0];
+                yellow += pair[1];
             }
         }
+        return new int[] {blue, yellow};
     }
 
     private void readTeams(ConfigurationSection section, Map<UUID, TeamId> teams) {
@@ -100,19 +123,22 @@ public final class DataStore {
         }
     }
 
-    private void applyScores(MatchState state, ConfigurationSection section) {
+    private void applyPause(MatchState state, ConfigurationSection section) {
         if (state == null || section == null) {
             return;
         }
+        state.setPaused(section.getBoolean("paused", false));
+    }
+
+    private int[] scoresFrom(ConfigurationSection section) {
+        if (section == null) {
+            return new int[] {0, 0};
+        }
         ConfigurationSection scores = section.getConfigurationSection("scores");
         if (scores == null) {
-            state.setScore(TeamId.BLUE, section.getInt("scores.blue", 0));
-            state.setScore(TeamId.YELLOW, section.getInt("scores.yellow", 0));
-        } else {
-            state.setScore(TeamId.BLUE, scores.getInt("blue", 0));
-            state.setScore(TeamId.YELLOW, scores.getInt("yellow", 0));
+            return new int[] {section.getInt("scores.blue", 0), section.getInt("scores.yellow", 0)};
         }
-        state.setPaused(section.getBoolean("paused", false));
+        return new int[] {scores.getInt("blue", 0), scores.getInt("yellow", 0)};
     }
 
     public void save(HillRegistry registry) {
@@ -126,12 +152,10 @@ public final class DataStore {
         YamlConfiguration yaml = new YamlConfiguration();
         registry.teams()
                 .forEach((id, team) -> yaml.set("teams." + id, team.name().toLowerCase(Locale.ROOT)));
+        yaml.set("scores.blue", registry.teams().score(TeamId.BLUE));
+        yaml.set("scores.yellow", registry.teams().score(TeamId.YELLOW));
         for (HillInstance instance : registry.all()) {
-            String prefix = "hills." + instance.hillId();
-            MatchState state = instance.match();
-            yaml.set(prefix + ".scores.blue", state.score(TeamId.BLUE));
-            yaml.set(prefix + ".scores.yellow", state.score(TeamId.YELLOW));
-            yaml.set(prefix + ".paused", state.paused());
+            yaml.set("hills." + instance.hillId() + ".paused", instance.match().paused());
         }
         Path target = file.toPath();
         Path temp = target.resolveSibling("data.yml.tmp");

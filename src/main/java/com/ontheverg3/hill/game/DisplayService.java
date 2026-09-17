@@ -36,7 +36,7 @@ public final class DisplayService {
     }
 
     public void consider(Player player) {
-        if (player == null || !player.isOnline() || !shouldRender(player)) {
+        if (player == null || !player.isOnline() || !shouldRender(player) || !inScoreHud(player)) {
             if (player != null) {
                 hudClients.remove(player.getUniqueId());
             }
@@ -117,6 +117,21 @@ public final class DisplayService {
         }
     }
 
+    public void refresh(Player player) {
+        if (player == null || !player.isOnline()) {
+            return;
+        }
+        consider(player);
+        if (!hudClients.containsKey(player.getUniqueId())) {
+            if (plugin.config() != null && plugin.config().actionBar()) {
+                player.sendActionBar(Component.empty());
+            }
+            hideBossBar(player);
+            return;
+        }
+        render(player);
+    }
+
     public int lastHudClients() {
         return lastHudClients;
     }
@@ -150,6 +165,14 @@ public final class DisplayService {
         return prefix.isEmpty() || !player.getName().startsWith(prefix);
     }
 
+    private boolean inScoreHud(Player player) {
+        var config = plugin.config();
+        if (config == null || config.scoresHud().always()) {
+            return true;
+        }
+        return plugin.hills().containing(player.getLocation()) != null;
+    }
+
     private boolean wantsBossBar(Player player) {
         var config = plugin.config();
         return config != null && config.bossBar() && bossBarVisible(player.getUniqueId());
@@ -159,12 +182,12 @@ public final class DisplayService {
         if (!player.isOnline()) {
             return;
         }
-        HillInstance hill = plugin.hills().ofPlayer(player);
+        HillInstance hill = plugin.hills().containing(player.getLocation());
         HudFrame current = HudFrame.capture(plugin, hill);
         if (plugin.config().actionBar()) {
             player.sendActionBar(current.actionBar());
         }
-        if (!wantsBossBar(player) || hill == null) {
+        if (!wantsBossBar(player)) {
             hideBossBar(player);
             return;
         }
@@ -180,37 +203,46 @@ public final class DisplayService {
             return;
         }
         bar.name(current.bossBar());
-        bar.progress(0.0f);
-        bar.color(BossBar.Color.WHITE);
+        bar.progress(current.progress());
+        bar.color(current.color());
     }
 
-    private record HudFrame(Component actionBar, Component bossBar, int hash) {
-        private static final HudFrame EMPTY = new HudFrame(Component.empty(), Component.empty(), 0);
+    private record HudFrame(Component actionBar, Component bossBar, int hash, float progress, BossBar.Color color) {
 
         private static HudFrame capture(HillPlugin plugin, HillInstance hill) {
-            if (hill == null) {
-                return EMPTY;
-            }
             Lang lang = plugin.lang();
-            MatchState match = hill.match();
-            PointState state = match.pointState();
-            int blueScore = match.score(TeamId.BLUE);
-            int yellowScore = match.score(TeamId.YELLOW);
-            Component point = pointComponent(lang, state);
+            TeamLooks teams = plugin.config().teams();
+            int blueScore = plugin.hills().teams().score(TeamId.BLUE);
+            int yellowScore = plugin.hills().teams().score(TeamId.YELLOW);
+            PointState state = hill == null ? null : hill.match().pointState();
+            Component point = hill == null ? lang.hud("status-point-away") : pointComponent(lang, state);
             var blue = lang.number("score_blue", blueScore);
             var yellow = lang.number("score_yellow", yellowScore);
             var pointTag = lang.component("point", point);
             Component action = lang.hud("action-bar", blue, yellow, pointTag);
-            TeamLooks teams = plugin.config().teams();
-            ScoreBar.Fill fill = ScoreBar.fill(
-                    blueScore, yellowScore, plugin.config().bossBarWidth(), plugin.config().winScore());
+            ScoreBar.Fill fill = ScoreBar.fill(blueScore, yellowScore, plugin.config().bossBarWidth());
             Component bar = ScoreBar.component(fill, teams.team1().color(), teams.team2().color());
             Component boss = lang.hud("boss-bar", blue, yellow, pointTag, lang.component("bar", bar));
-            int hash = 31 * (31 * (31 * (31 * (31 * state.ordinal() + blueScore) + yellowScore)
-                            + hill.hillId().hashCode())
+            float progress = ScoreBar.trackProgress(blueScore, yellowScore);
+            BossBar.Color color = trackColor(teams, blueScore, yellowScore);
+            int hash = 31 * (31 * (31 * (31 * (31 * (31 * (state == null ? -1 : state.ordinal()) + blueScore)
+                                    + yellowScore)
+                            + (hill == null ? 0 : hill.hillId().hashCode()))
                     + fill.leftFilled())
-                    + fill.rightFilled();
-            return new HudFrame(action, boss, hash);
+                    + fill.rightFilled())
+                    + Float.floatToIntBits(progress)
+                    + color.ordinal();
+            return new HudFrame(action, boss, hash, progress, color);
+        }
+
+        private static BossBar.Color trackColor(TeamLooks teams, int blueScore, int yellowScore) {
+            if (blueScore > yellowScore) {
+                return teams.team1().bossBarColor();
+            }
+            if (yellowScore > blueScore) {
+                return teams.team2().bossBarColor();
+            }
+            return BossBar.Color.WHITE;
         }
 
         private static Component pointComponent(Lang lang, PointState state) {
