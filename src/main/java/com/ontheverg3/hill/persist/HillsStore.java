@@ -3,6 +3,7 @@ package com.ontheverg3.hill.persist;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonParseException;
+import com.ontheverg3.hill.config.FiniteNumbers;
 import com.ontheverg3.hill.game.HillInstance;
 import com.ontheverg3.hill.game.HillMode;
 import com.ontheverg3.hill.game.HillRegistry;
@@ -118,6 +119,10 @@ public final class HillsStore {
             plugin.getLogger().warning("Ignored hill '" + id + "': unknown shape " + model.shape);
             return null;
         }
+        if (!FiniteNumbers.allFinite(model.x, model.y, model.z, model.rx, model.ry, model.rz)) {
+            plugin.getLogger().warning("Ignored hill '" + id + "': coordinates and radius must be finite");
+            return null;
+        }
         if (model.rx <= 0 || model.ry <= 0 || model.rz <= 0) {
             plugin.getLogger().warning("Ignored hill '" + id + "': radius must be positive");
             return null;
@@ -143,6 +148,11 @@ public final class HillsStore {
         String save = model.save == null || model.save.isBlank() ? HillIds.saveName(world) : model.save;
         String dimension =
                 model.dimension == null || model.dimension.isBlank() ? HillIds.OVERWORLD : model.dimension;
+        if (!FiniteNumbers.allFinite(
+                model.minX, model.minY, model.minZ, model.maxX, model.maxY, model.maxZ)) {
+            plugin.getLogger().warning("Ignored a team pad in hills.json with non-finite coordinates");
+            return null;
+        }
         return new TeamPad(
                 team, world, save, dimension, model.minX, model.minY, model.minZ, model.maxX, model.maxY, model.maxZ);
     }

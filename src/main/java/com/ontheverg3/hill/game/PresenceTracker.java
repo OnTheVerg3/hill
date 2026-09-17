@@ -4,6 +4,7 @@ import com.ontheverg3.hill.config.HillConfig;
 import com.ontheverg3.hill.zone.CaptureZone;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import org.bukkit.Location;
 import org.bukkit.entity.Player;
 
 public final class PresenceTracker {
@@ -50,10 +51,17 @@ public final class PresenceTracker {
     }
 
     public void sync(Player player, HillConfig config, CaptureZone zone, TeamBoard teams) {
+        sync(player, config, zone, teams, player == null ? null : player.getLocation());
+    }
+
+    public void sync(Player player, HillConfig config, CaptureZone zone, TeamBoard teams, Location at) {
         if (player == null) {
             return;
         }
         UUID id = player.getUniqueId();
+        if (at == null) {
+            at = player.getLocation();
+        }
         if (!player.isOnline() || config == null || zone == null || teams == null || !zone.usable()) {
             inside.remove(id);
             return;
@@ -63,7 +71,7 @@ public final class PresenceTracker {
             inside.remove(id);
             return;
         }
-        if (config.scoringFilter().excluded(player) || !zone.contains(player.getLocation())) {
+        if (config.scoringFilter().excluded(player) || !zone.contains(at)) {
             inside.remove(id);
             return;
         }

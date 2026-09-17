@@ -64,7 +64,7 @@ public final class PercentSplit {
         }
         try {
             double value = Double.parseDouble(matcher.group(1));
-            if (value < 0.0 || value > 100.0) {
+            if (!Double.isFinite(value) || value < 0.0 || value > 100.0) {
                 return null;
             }
             return value;

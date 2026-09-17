@@ -40,6 +40,8 @@ Every `scoring.interval-seconds` (default 5), each hill is checked on its own. I
 
 Unassigned players standing in a hill do not count for either team. Dead players do not count toward scoring by default. Spectator and creative are skipped through `eligibility.exclude-gamemodes` (default: spectator only, so creative can still score). Pause keeps the scores.
 
+Occupancy uses the player's exact X, Y, and Z, not the block they stand on. `/hill new ... 6.5 circle` stores radius 6.5 from the center. Walking from 6.4 to 6.6 on the same block can enter or leave that hill.
+
 `scoring.win-score` (default 0) is an optional score cap. The split boss bar is always the two scores as a ratio of each other. It does not use `win-score`.
 
 `/hill assign` and `/hill autodivide` skip players who fail `assign:` in `config.yml` (dead, plus `exclude-gamemodes`; default spectator and creative). Named players always assign. Selectors still skip those players unless the selector already filters by gamemode or dead/alive.
@@ -99,7 +101,7 @@ These are normal Bukkit permission nodes. LuckPerms and vanilla operators both w
 
 ## Config
 
-`config.yml` holds scoring, eligibility, assign filters, team names and colors, HUD, outline, and locale. Hill geometry is not in this file.
+`config.yml` holds scoring, eligibility, assign filters, team names and colors, HUD, outline, and locale. Hill geometry is not in this file. Numbers must be finite; `NaN` and `Infinity` are rejected (`/hill reload` keeps the last good config). The same rule applies to `hills.json`: that hill or pad is skipped.
 
 | Key | Default | What it does |
 |---|---|---|

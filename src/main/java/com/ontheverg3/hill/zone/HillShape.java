@@ -1,5 +1,6 @@
 package com.ontheverg3.hill.zone;
 
+import com.ontheverg3.hill.config.FiniteNumbers;
 import java.util.Locale;
 import java.util.Optional;
 
@@ -34,7 +35,7 @@ public enum HillShape {
 
     public static boolean contains(
             HillShape shape, double dx, double dy, double dz, double rx, double ry, double rz) {
-        if (rx <= 0 || ry <= 0 || rz <= 0) {
+        if (!FiniteNumbers.allFinite(dx, dy, dz, rx, ry, rz) || rx <= 0 || ry <= 0 || rz <= 0) {
             return false;
         }
         return switch (shape) {

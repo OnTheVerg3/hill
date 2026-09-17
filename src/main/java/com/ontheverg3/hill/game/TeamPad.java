@@ -1,5 +1,6 @@
 package com.ontheverg3.hill.game;
 
+import com.ontheverg3.hill.config.FiniteNumbers;
 import com.ontheverg3.hill.world.HillDimensions;
 import org.bukkit.Location;
 import org.bukkit.World;
@@ -32,6 +33,9 @@ public final class TeamPad {
         this.world = world;
         this.save = save;
         this.dimension = dimension;
+        if (!FiniteNumbers.allFinite(minX, minY, minZ, maxX, maxY, maxZ)) {
+            throw new IllegalArgumentException("pad coordinates must be finite");
+        }
         this.minX = Math.min(minX, maxX);
         this.minY = Math.min(minY, maxY);
         this.minZ = Math.min(minZ, maxZ);

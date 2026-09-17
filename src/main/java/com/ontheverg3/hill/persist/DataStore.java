@@ -1,5 +1,6 @@
 package com.ontheverg3.hill.persist;
 
+import com.ontheverg3.hill.config.FiniteNumbers;
 import com.ontheverg3.hill.game.HillInstance;
 import com.ontheverg3.hill.game.HillRegistry;
 import com.ontheverg3.hill.game.MatchState;
@@ -49,8 +50,8 @@ public final class DataStore {
         int[] scores = new int[2];
         boolean haveGlobalScores = yaml.contains("scores");
         if (haveGlobalScores) {
-            scores[0] = yaml.getInt("scores.blue", 0);
-            scores[1] = yaml.getInt("scores.yellow", 0);
+            scores[0] = FiniteNumbers.finiteInt(yaml, "scores.blue", 0);
+            scores[1] = FiniteNumbers.finiteInt(yaml, "scores.yellow", 0);
         }
         ConfigurationSection hills = yaml.getConfigurationSection("hills");
         if (hills != null) {
@@ -136,9 +137,11 @@ public final class DataStore {
         }
         ConfigurationSection scores = section.getConfigurationSection("scores");
         if (scores == null) {
-            return new int[] {section.getInt("scores.blue", 0), section.getInt("scores.yellow", 0)};
+            return new int[] {FiniteNumbers.finiteInt(section, "scores.blue", 0), FiniteNumbers.finiteInt(section, "scores.yellow", 0)};
         }
-        return new int[] {scores.getInt("blue", 0), scores.getInt("yellow", 0)};
+        return new int[] {
+            FiniteNumbers.finiteInt(scores, "blue", 0), FiniteNumbers.finiteInt(scores, "yellow", 0)
+        };
     }
 
     public void save(HillRegistry registry) {

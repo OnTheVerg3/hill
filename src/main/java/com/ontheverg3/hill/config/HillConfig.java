@@ -79,7 +79,7 @@ public final class HillConfig {
         TeamLooks teams = loadTeams(yaml);
         boolean actionBar = yaml.getBoolean("display.action-bar", true);
         boolean bossBar = yaml.getBoolean("display.boss-bar", true);
-        int bossBarWidth = yaml.getInt("display.boss-bar-width", 24);
+        int bossBarWidth = FiniteNumbers.optionalInt(yaml, "display.boss-bar-width", 24);
         if (bossBarWidth < 8) {
             throw new ConfigException("display.boss-bar-width must be >= 8");
         }
@@ -104,11 +104,11 @@ public final class HillConfig {
         boolean resetClearsTeams = yaml.getBoolean("reset.clear-teams", false);
         boolean reloadResets = yaml.getBoolean("reload-resets", false);
         boolean outlineEnabled = yaml.getBoolean("outline.enabled", true);
-        int outlineTicks = yaml.getInt("outline.interval-ticks", 10);
+        int outlineTicks = FiniteNumbers.optionalInt(yaml, "outline.interval-ticks", 10);
         if (outlineTicks < 1) {
             throw new ConfigException("outline.interval-ticks must be >= 1");
         }
-        int outlinePoints = yaml.getInt("outline.points", 72);
+        int outlinePoints = FiniteNumbers.optionalInt(yaml, "outline.points", 72);
         if (outlinePoints < 16) {
             throw new ConfigException("outline.points must be >= 16");
         }
@@ -317,10 +317,7 @@ public final class HillConfig {
     }
 
     private static int requirePositiveInt(FileConfiguration yaml, String path) throws ConfigException {
-        if (!yaml.isInt(path) && !yaml.isDouble(path)) {
-            throw new ConfigException(path + " must be a number");
-        }
-        int value = yaml.getInt(path);
+        int value = (int) FiniteNumbers.fromObject(yaml.get(path), path);
         if (value < 1) {
             throw new ConfigException(path + " must be >= 1");
         }
@@ -331,10 +328,7 @@ public final class HillConfig {
         if (!yaml.contains(path)) {
             throw new ConfigException(path + " is required");
         }
-        if (!yaml.isInt(path) && !yaml.isDouble(path)) {
-            throw new ConfigException(path + " must be a number");
-        }
-        int value = yaml.getInt(path);
+        int value = (int) FiniteNumbers.fromObject(yaml.get(path), path);
         if (value < 0) {
             throw new ConfigException(path + " must be >= 0");
         }

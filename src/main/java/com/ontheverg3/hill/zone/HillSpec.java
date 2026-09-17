@@ -1,5 +1,7 @@
 package com.ontheverg3.hill.zone;
 
+import com.ontheverg3.hill.config.FiniteNumbers;
+
 public final class HillSpec {
     private final String id;
     private final String display;
@@ -33,6 +35,9 @@ public final class HillSpec {
         this.save = save;
         this.dimension = dimension;
         this.shape = shape;
+        if (!FiniteNumbers.allFinite(x, y, z, rx, ry, rz) || rx <= 0 || ry <= 0 || rz <= 0) {
+            throw new IllegalArgumentException("hill geometry must use finite positive radii");
+        }
         this.x = x;
         this.y = y;
         this.z = z;

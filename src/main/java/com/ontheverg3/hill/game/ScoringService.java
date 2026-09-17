@@ -9,6 +9,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import org.bukkit.Bukkit;
+import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
 
@@ -132,12 +133,16 @@ public final class ScoringService {
     }
 
     public boolean syncHere(Player player) {
+        return syncHere(player, player == null ? null : player.getLocation());
+    }
+
+    public boolean syncHere(Player player, Location at) {
         HillConfig config = plugin.config();
         if (config == null || player == null) {
             return false;
         }
         plugin.hills().rememberPlayer(player);
-        boolean assigned = plugin.hills().applyTeamPad(player, config);
+        boolean assigned = plugin.hills().applyTeamPad(player, config, at);
         if (assigned) {
             plugin.persistMatch();
             TeamId team = plugin.hills().teams().teamOf(player.getUniqueId());
@@ -149,10 +154,10 @@ public final class ScoringService {
                                 plugin.lang().component("team", plugin.lang().hud(team.langKey())));
             }
         }
-        World world = player.getWorld();
+        World world = at != null && at.getWorld() != null ? at.getWorld() : player.getWorld();
         for (HillInstance hill : plugin.hills().all()) {
             if (world != null && world.equals(hill.zone().worldOrNull())) {
-                hill.tracker().sync(player, config, hill.zone(), plugin.hills().teams());
+                hill.tracker().sync(player, config, hill.zone(), plugin.hills().teams(), at);
             } else {
                 hill.tracker().remove(player.getUniqueId());
             }

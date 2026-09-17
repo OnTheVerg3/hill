@@ -1,6 +1,7 @@
 package com.ontheverg3.hill.zone;
 
 import com.ontheverg3.hill.config.ConfigException;
+import com.ontheverg3.hill.config.FiniteNumbers;
 import java.util.Locale;
 import org.bukkit.Location;
 import org.bukkit.World;
@@ -80,8 +81,8 @@ public final class ZoneSpec {
         String type = typeRaw.trim().toUpperCase(Locale.ROOT);
         if (type.equals("SPHERE")) {
             double radius = section.getDouble("radius", Double.NaN);
-            if (!(radius >= 0.0) || Double.isNaN(radius)) {
-                throw new ConfigException(path + ".radius must be >= 0");
+            if (!FiniteNumbers.isFinite(radius) || radius < 0.0) {
+                throw new ConfigException(path + ".radius must be a finite number >= 0");
             }
             double[] center = requireXyz(section.getConfigurationSection("center"), path + ".center");
             return sphere(center[0], center[1], center[2], radius);
@@ -143,6 +144,12 @@ public final class ZoneSpec {
         if (!section.contains("x") || !section.contains("y") || !section.contains("z")) {
             throw new ConfigException(path + " needs x, y, z");
         }
-        return new double[] {section.getDouble("x"), section.getDouble("y"), section.getDouble("z")};
+        double x = section.getDouble("x");
+        double y = section.getDouble("y");
+        double z = section.getDouble("z");
+        if (!FiniteNumbers.allFinite(x, y, z)) {
+            throw new ConfigException(path + " coordinates must be finite");
+        }
+        return new double[] {x, y, z};
     }
 }

@@ -2,6 +2,7 @@ package com.ontheverg3.hill.listener;
 
 import com.ontheverg3.hill.HillPlugin;
 import com.ontheverg3.hill.game.HillInstance;
+import com.ontheverg3.hill.world.Positions;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -38,18 +39,12 @@ public final class PresenceListener implements Listener {
     public void onMove(PlayerMoveEvent event) {
         Location from = event.getFrom();
         Location to = event.getTo();
-        if (to == null) {
-            return;
-        }
-        if (from.getBlockX() == to.getBlockX()
-                && from.getBlockY() == to.getBlockY()
-                && from.getBlockZ() == to.getBlockZ()
-                && from.getWorld() == to.getWorld()) {
+        if (to == null || !Positions.translation(from, to)) {
             return;
         }
         Player player = event.getPlayer();
         HillInstance fromHill = plugin.hills().containing(from);
-        boolean assigned = plugin.scoring().syncHere(player);
+        boolean assigned = plugin.scoring().syncHere(player, to);
         HillInstance toHill = plugin.hills().containing(to);
         if (assigned || fromHill != toHill) {
             plugin.display().refresh(player);

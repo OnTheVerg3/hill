@@ -303,10 +303,15 @@ public final class HillRegistry {
     }
 
     public boolean applyTeamPad(Player player, HillConfig config) {
+        return applyTeamPad(player, config, player == null ? null : player.getLocation());
+    }
+
+    public boolean applyTeamPad(Player player, HillConfig config, Location at) {
         if (player == null || config == null || config.assignExcluded(player)) {
             return false;
         }
-        TeamPad pad = padAt(player.getLocation());
+        Location here = at != null ? at : player.getLocation();
+        TeamPad pad = padAt(here);
         if (pad == null) {
             return false;
         }

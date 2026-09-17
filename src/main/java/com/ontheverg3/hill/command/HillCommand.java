@@ -7,6 +7,7 @@ import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import com.mojang.brigadier.tree.LiteralCommandNode;
 import com.ontheverg3.hill.HillPlugin;
 import com.ontheverg3.hill.config.ConfigException;
+import com.ontheverg3.hill.config.FiniteNumbers;
 import com.ontheverg3.hill.game.HillInstance;
 import com.ontheverg3.hill.game.HillMode;
 import com.ontheverg3.hill.game.PointState;
@@ -996,26 +997,21 @@ public final class HillCommand {
             if (!relativeOk) {
                 throw new IllegalArgumentException("relative");
             }
-            return origin + Double.parseDouble(token.substring(1));
+            return origin + FiniteNumbers.parse(token.substring(1));
         }
-        return Double.parseDouble(token);
+        return FiniteNumbers.parse(token);
     }
 
     private static boolean looksNumber(String token) {
         if (token == null || token.isBlank() || token.startsWith("~")) {
             return false;
         }
-        try {
-            Double.parseDouble(token);
-            return true;
-        } catch (NumberFormatException ex) {
-            return false;
-        }
+        return FiniteNumbers.looksFinite(token);
     }
 
     private static double parsePositive(String token) {
         try {
-            return Double.parseDouble(token);
+            return FiniteNumbers.parse(token);
         } catch (NumberFormatException ex) {
             return -1;
         }
