@@ -19,6 +19,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -29,14 +30,32 @@ public final class DataStore {
     private final AtomicBoolean running = new AtomicBoolean();
     private volatile boolean dirty;
 
+    private volatile boolean persistable;
+
     public DataStore(JavaPlugin plugin) {
         this.plugin = plugin;
         this.file = new File(plugin.getDataFolder(), "data.yml");
     }
 
-    public void load(HillRegistry registry) {
+    public boolean persistable() {
+        return persistable;
+    }
+
+    public boolean load(HillRegistry registry) {
         synchronized (lock) {
-            loadUnlocked(registry);
+            try {
+                loadUnlocked(registry);
+                persistable = true;
+                return true;
+            } catch (RuntimeException ex) {
+                persistable = false;
+                plugin.getLogger()
+                        .log(
+                                Level.SEVERE,
+                                "Could not read data.yml. Match data will not be saved until a successful load.",
+                                ex);
+                return false;
+            }
         }
     }
 
@@ -44,7 +63,21 @@ public final class DataStore {
         if (!file.exists()) {
             return;
         }
-        YamlConfiguration yaml = YamlConfiguration.loadConfiguration(file);
+        String raw;
+        try {
+            raw = Files.readString(file.toPath());
+        } catch (IOException ex) {
+            throw new IllegalStateException("Could not read data.yml", ex);
+        }
+        if (raw.isBlank()) {
+            throw new IllegalStateException("data.yml is empty or unreadable");
+        }
+        YamlConfiguration yaml = new YamlConfiguration();
+        try {
+            yaml.loadFromString(raw);
+        } catch (InvalidConfigurationException ex) {
+            throw new IllegalStateException("Could not parse data.yml", ex);
+        }
         Map<UUID, TeamId> teams = new HashMap<>();
         readTeams(yaml.getConfigurationSection("teams"), teams);
         int[] scores = new int[2];
@@ -146,6 +179,10 @@ public final class DataStore {
 
     public void save(HillRegistry registry) {
         synchronized (lock) {
+            if (!persistable) {
+                plugin.getLogger().severe("Skipped writing data.yml because the last load failed.");
+                return;
+            }
             saveUnlocked(registry);
         }
     }
@@ -175,6 +212,9 @@ public final class DataStore {
     }
 
     public void requestSave(HillRegistry registry) {
+        if (!persistable) {
+            return;
+        }
         dirty = true;
         if (!running.compareAndSet(false, true)) {
             return;

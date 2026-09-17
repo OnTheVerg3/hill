@@ -55,7 +55,7 @@ Occupancy uses the player's exact X, Y, and Z, not the block they stand on. `/hi
 | `/hill mode <ctf\|koth>` | Switch modes. Warns in chat with clickable Confirm / Cancel. Clears all hills and scores. KotH is the default. |
 | `/hill new <x\|~> <y\|~> <z\|~> <radius\|rx ry rz> <square\|circle\|cube\|sphere\|cylinder> <id> ["display name"]` | Create a hill at those coordinates in your world. One radius is a circle/square footprint (height 16) or a cube/sphere/cylinder of that size. Three radii set x, y, and z independently. |
 | `/hill remove <id\|all>` | Delete a hill, or every hill |
-| `/hill reload` | Reload config, language, and `hills.json`. Does not load a new jar |
+| `/hill reload` | Reload config and language, then read `hills.json` and write it back in canonical form. Does not load a new jar |
 | `/hill help [command]` | Command list, or a details page for one command. Names are clickable |
 | `/hill assign <player\|selector> <blue\|yellow>` | Assign to a team. You can also use `team1`, `team2`, or the configured display names. Named players always assign. Selectors skip players excluded by `assign:` in config unless the selector already mentions gamemode or dead |
 | `/hill unassign <player\|selector\|all>` | Remove from a team |
@@ -101,7 +101,7 @@ These are normal Bukkit permission nodes. LuckPerms and vanilla operators both w
 
 ## Config
 
-`config.yml` holds scoring, eligibility, assign filters, team names and colors, HUD, outline, and locale. Hill geometry is not in this file. Numbers must be finite; `NaN` and `Infinity` are rejected (`/hill reload` keeps the last good config). The same rule applies to `hills.json`: that hill or pad is skipped.
+`config.yml` holds scoring, eligibility, assign filters, team names and colors, HUD, outline, and locale. Hill geometry is not in this file. Numbers must be finite; `NaN` and `Infinity` are rejected (`/hill reload` keeps the last good config). The same rule applies to `hills.json`: that hill or pad is skipped. If `hills.json` itself cannot be read, the file is left as-is, the last loaded hills stay in memory, and Hill will not save over it until a later load succeeds. `"hills": null` is treated as no hills. A missing file on first boot is an empty catalog. The same fail-closed rule applies to `data.yml`.
 
 | Key | Default | What it does |
 |---|---|---|
@@ -130,7 +130,7 @@ These are normal Bukkit permission nodes. LuckPerms and vanilla operators both w
 | `reset.clear-teams` | false | `/hill reset` also clears team assignments when true |
 | `reload-resets` | false | `/hill reload` also resets scores when true |
 
-Bad numbers keep the last good config on reload. If a hill's world is not loaded, that hill is unusable until it loads. Other hills still score.
+Bad numbers keep the last good config on reload. Unreadable `hills.json` or `data.yml` keeps that file and does not save defaults over it. If a hill's world is not loaded, that hill is unusable until it loads. Other hills still score.
 
 Lang: copy `plugins/Hill/lang/<code>.yml` and set `locale:` to the file name. Missing keys fall back to English.
 

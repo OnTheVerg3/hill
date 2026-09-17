@@ -196,8 +196,10 @@ public final class HillRegistry {
         }
         instances.keySet().removeIf(id -> !next.containsKey(id));
         instances.putAll(next);
-        for (World world : Bukkit.getWorlds()) {
-            bindWorld(world);
+        if (Bukkit.getServer() != null) {
+            for (World world : Bukkit.getWorlds()) {
+                bindWorld(world);
+            }
         }
         for (HillInstance instance : instances.values()) {
             bindSpec(instance);
@@ -325,9 +327,12 @@ public final class HillRegistry {
 
     private void bindSpec(HillInstance instance) {
         HillSpec spec = instance.spec();
-        World world = Bukkit.getWorld(spec.world());
-        if (world == null) {
-            world = HillDimensions.worldOrNull(spec.save(), spec.dimension());
+        World world = null;
+        if (Bukkit.getServer() != null) {
+            world = Bukkit.getWorld(spec.world());
+            if (world == null) {
+                world = HillDimensions.worldOrNull(spec.save(), spec.dimension());
+            }
         }
         if (world == null) {
             instance.setZone(new UnusableZone("world not loaded: " + spec.world()));

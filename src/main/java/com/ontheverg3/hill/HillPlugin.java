@@ -60,8 +60,12 @@ public final class HillPlugin extends JavaPlugin {
             lang.load("en");
             lang.setDefaults(this.config.teams().resolvers());
         }
-        hillsStore.load(hills);
-        dataStore.load(hills);
+        if (!hillsStore.load(hills)) {
+            getLogger().severe("Hill geometry was not loaded. hills.json was left unchanged.");
+        }
+        if (!dataStore.load(hills)) {
+            getLogger().severe("Teams and scores were not loaded. data.yml was left unchanged.");
+        }
         getServer().getPluginManager().registerEvents(new PlayerListener(this), this);
         getServer().getPluginManager().registerEvents(new PresenceListener(this), this);
         getServer().getPluginManager().registerEvents(new WorldListener(this), this);
@@ -104,7 +108,6 @@ public final class HillPlugin extends JavaPlugin {
 
     public void reloadAll() throws ConfigException {
         persistMatch();
-        persistHills();
         HillConfig previous = this.config;
         try {
             reloadMatchConfig();
@@ -112,7 +115,9 @@ public final class HillPlugin extends JavaPlugin {
             this.config = previous;
             throw ex;
         }
-        hillsStore.load(hills);
+        if (!hillsStore.reload(hills)) {
+            throw new ConfigException("Could not read hills.json. The file was left unchanged.");
+        }
         if (config.reloadResets()) {
             hills.resetScores();
             dataStore.save(hills);
